@@ -1,0 +1,47 @@
+{
+    "robot type": [
+        {
+            "name": "AMR_LIFT",
+            "length": "0.75",
+            "width": "0.45",
+            "height": "0.32",
+            "payload": "1500",
+            "line maxspeed": "0.7",
+            "angular maxspeed": "0.7",
+            "line accel": "0.5",
+            "angular accel": "0.5",
+            "radius": "0.9",
+            "min distance": "3.0",
+            "imgfilename": "img.jpg",
+            "maxfloor": "1"
+        },
+        {
+            "name": "FORKLIFT",
+            "length": "1.75",
+            "width": "1.45",
+            "height": "1.32",
+            "payload": "3500",
+            "line maxspeed": "0.7",
+            "angular maxspeed": "0.7",
+            "line accel": "0.5",
+            "angular accel": "0.5",
+            "radius": "0.9",
+            "min distance": "5.0",
+            "imgfilename": "img.jpg",
+            "maxfloor": "4"
+        }
+    ],
+    "robots": 
+    [
+        {
+            "name": "AMR1",
+            "type": "AMR_LIFT",
+            "theta": "180",
+            "minVoltage": "30.000000",
+            "readyVoltage": "80.000000",
+            "maxspeed": "1",
+            "initpos": "0",
+            "zone": "0"
+        }
+    ]
+}

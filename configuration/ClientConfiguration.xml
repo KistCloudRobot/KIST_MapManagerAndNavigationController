@@ -1,0 +1,8 @@
+<?xml version="1.0"?>
+<ARBIFrameworkClientConfiguration>
+	<OS>WINDOW</OS>
+	<ClientAgent>
+		<AgentClassPath>D:/workspace/AgentManagementTest/bin</AgentClassPath>
+		<AgentMainClass>test.TestAgent</AgentMainClass>
+	</ClientAgent>
+</ARBIFrameworkClientConfiguration>
