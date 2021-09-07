@@ -64,7 +64,6 @@ class MapCloudlet:
             self.Door[id] = {'timestamp': [t_init], 'status': [0]}
 
     def update_MOS_robot_info(self, info):  # call this function when robot_information is updated by MOS
-
         if info.id in self.AMR_LIFT_IDs:
             info.vertex = self.convert_pose_to_vertex(info.pos)
             if self.robot_update_rule(self.AMR_LIFT, info):  # if the update rule is satisfied
@@ -413,14 +412,16 @@ class MapCloudlet:
         min_id = id_set[dist_set.index(min_dist)]
 
         if min_dist < th ** 2:
-            return [min_id, min_id]
+            result = [min_id, min_id]
+            return result
         else:
             # parts of dist_set: extract distance from neighbor vertices
             id_set2 = self.static_map.Edge[min_id]
             dist_set2 = [dist_set[id_set2.index(id)] for id in id_set2]
             min_dist2 = min(dist_set2)
             min_id2 = id_set2[dist_set2.index(min_dist2)]
-            return [min_id, min_id2]
+            result = [min_id, min_id2]
+            return result
 
     def search_obj_at_vertex(self, objlist, v):  # objlist: AMR_LIFT, AMR_TOW, ...
         objs = []
