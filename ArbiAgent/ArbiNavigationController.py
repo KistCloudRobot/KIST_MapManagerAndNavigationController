@@ -1,17 +1,21 @@
-import os
 import sys
 import time
+import socket
+import pathlib
 from threading import Condition, Thread
-from arbi_agent.agent import arbi_agent
 
 from arbi_agent.agent.arbi_agent import ArbiAgent
-from arbi_agent.configuration import BrokerType
 from arbi_agent.ltm.data_source import DataSource
 from arbi_agent.agent import arbi_agent_excutor
 from arbi_agent.model import generalized_list_factory as GLFactory
 
+sys.path.append(str(pathlib.Path(__file__).parent.parent.resolve()))
+
 from MapManagement.MapMOS import MapMOS
 from NavigationControl.NavigationControl import NavigationControl
+
+agent_MAPF = "agent://www.arbi.com/Local/MultiAgentPathFinder"
+broker_url = "tcp://" + str(socket.gethostbyname(socket.gethostname())) + ":61316"
 
 
 class NavigationControlerDataSource(DataSource):
@@ -20,7 +24,7 @@ class NavigationControlerDataSource(DataSource):
         self.broker = broker_url
         self.connect(self.broker, "ds://www.arbi.com/Local/NavigationController", 2)
 
-        self.map_file = "../data/map_cloud.txt"
+        self.map_file = str(pathlib.Path(__file__).parent.parent.resolve()) + "/data/map_cloud.txt"
         self.MAP = MapMOS(self.map_file)
         
         self.AMR_IDs = ["AMR_LIFT1", "AMR_LIFT2", "AMR_TOW1", "AMR_TOW2"]
@@ -38,6 +42,7 @@ class NavigationControlerDataSource(DataSource):
 class NavigationControlerAgent(ArbiAgent):
     def __init__(self):
         super().__init__()
+        self.ltm = None
         self.lock = Condition()
         self.TA_name = "agent://TM" # name of MAPF
         # TODO LIFT, TOW TM name dict로 수정된거 할당
@@ -58,8 +63,8 @@ class NavigationControlerAgent(ArbiAgent):
         self.Goal_Status = {}
         
     def on_start(self):
-        self.ltm = NavigationControlerDataSource("tcp://172.16.165.204:61316")
-        self.ltm.connect("tcp://172.16.165.204:61316", "ds://www.arbi.com/Local/NavigationController", 2)
+        self.ltm = NavigationControlerDataSource(broker_url)
+        self.ltm.connect(broker_url, "ds://www.arbi.com/Local/NavigationController", 2)
 
         time.sleep(1)
 
@@ -88,7 +93,9 @@ class NavigationControlerAgent(ArbiAgent):
     def on_notify(self, sender, notification):
         print("on notify from " + sender + " notification : " + notification)
         temp_gl = GLFactory.new_gl_from_gl_string(notification)
-        if temp_gl.get_name() == "MultiRobotPose":
+        gl_name = temp_gl.get_name()
+
+        if gl_name == "MultiRobotPose":
             # temp_robotID = self.ltm.NC.AMR_IDs[temp_gl.get_expression(0).as_value()]
             # temp_vertex_info = temp_gl.get_expression(1).as_generalized_list()
             # temp_vertex_1 = temp_vertex_info.get_expression(0).as_value()
@@ -98,14 +105,14 @@ class NavigationControlerAgent(ArbiAgent):
             # temp_robot_pose[temp_robotID] = [temp_vertex_1, temp_vertex_2]
             # self.cur_robot_pose[temp_robotID] = temp_robot_pose[temp_robotID]
             # self.ltm.NC.update_robot_TM(temp_robot_pose)
-
             robot_num = temp_gl.get_expression_size()
             multi_robot_pose = {}
             for i in range(robot_num):
                 robot_gl = temp_gl.get_expression(i).as_generalized_list()
-                robot_id = self.AMR_IDs[temp_gl.get_expression(0).as_value()]
+                robot_id = robot_gl.get_expression(0).as_value().string_value()
                 robot_vertex_gl = robot_gl.get_expression(1).as_generalized_list()
-                robot_vertex = [robot_vertex_gl.get_expression(0).as_value(), robot_vertex_gl.get_expression(1).as_value()]
+                robot_vertex = [robot_vertex_gl.get_expression(0).as_value().int_value(),
+                                robot_vertex_gl.get_expression(1).as_value().int_value()]
                 multi_robot_pose[robot_id] = robot_vertex
                 self.cur_robot_pose[robot_id] = robot_vertex
 
@@ -113,8 +120,8 @@ class NavigationControlerAgent(ArbiAgent):
             if robot_sendTM:
                 self.Control_notify(robot_sendTM, self.robot_goal)
                     
-        elif temp_gl.get_name() == "Collidable":
-            collide_num = temp_gl.get_expression(0).as_value()
+        elif gl_name == "Collidable":
+            collide_num = temp_gl.get_expression(0).as_value().int_value()
             for i in range(collide_num):
                 temp_collide_gl = temp_gl.get_expression(i).as_generalized_list()
                 robot_ids = [temp_collide_gl.get_expression(0).as_value().string_value(), temp_collide_gl.get_expression(1).as_value().string_value()]
@@ -147,16 +154,18 @@ class NavigationControlerAgent(ArbiAgent):
                 self.Control_notify(robot_ids)
 
     def on_request(self, sender, request):
+        print("on request : " + request)
         gl = GLFactory.new_gl_from_gl_string(request)
         if gl.get_name() == "RobotPath":
-            task = Thread(target=self.request_path, args=(gl, ))
-            task.setDaemon(True)
-            task.start()
-            return "(ok)"
+            response = self.handle_multi_robot_path(gl)
+            robot_path = str(response.get_expression(0).as_generalized_list())
+            print("response :", robot_path)
+            return robot_path
         else:
+            print("what?", gl)
             return "(fail)"
 
-    def request_path(self, gl):
+    def handle_multi_robot_path(self, gl):
         goal = {}
         goal_robot_id = gl.get_expression(0).as_value().string_value()
         goal_vertex = gl.get_expression(2).as_value().int_value()
@@ -164,42 +173,61 @@ class NavigationControlerAgent(ArbiAgent):
         self.robot_goal[goal_robot_id] = goal_vertex
         robot_id_replan, robot_id_TM = self.ltm.NC.allocate_goal(goal, self.cur_robot_pose)
 
-        for robot_id in robot_id_TM:
-            # TODO pause GL 생각하기
-            self.send(robot_id, (""))
+        # TODO pause GL 생각하기
+        # self.send(robot_id, (""))
 
-        self.Control_notify(robot_id_TM, goal)
+        response = self.MultiRobotPath_query(robot_id_replan)
+        response_gl = GLFactory.new_gl_from_gl_string(response)
+        self.MultiRobotPath_update(response_gl)
+        return response_gl
 
-        if robot_id_replan:
-            response = self.MultiRobotPath_query(robot_id_replan)
-            response_gl = GLFactory.new_gl_from_gl_string(response)
-            self.MultiRobotPath_update(response_gl)
+        # self.Control_notify(robot_id_TM, goal)
 
-    def Control_notify(self, robot_ids, goal):
-        for robot_id in robot_ids:
-            RobotNavCont_gl = "(RobotPath \"" + robot_id + "\" "
-            RobotPathPlan_gl = "(RobotPathPlan \"" + robot_id + "\" "
-            path_gl = "(path"
+    # def request_path(self, gl):
+    #     goal = {}
+    #     goal_robot_id = gl.get_expression(0).as_value().string_value()
+    #     goal_vertex = gl.get_expression(2).as_value().int_value()
+    #     goal[goal_robot_id] = goal_vertex
+    #     self.robot_goal[goal_robot_id] = goal_vertex
+    #     robot_id_replan, robot_id_TM = self.ltm.NC.allocate_goal(goal, self.cur_robot_pose)
+    #
+    #     for robot_id in robot_id_TM:
+    #         # TODO pause GL 생각하기
+    #         #self.send(robot_id, (""))
+    #         pass
+    #
+    #     self.Control_notify(robot_id_TM, goal)
+    #
+    #     if robot_id_replan:
+    #         response = self.MultiRobotPath_query(robot_id_replan)
+    #         response_gl = GLFactory.new_gl_from_gl_string(response)
+    #         self.MultiRobotPath_update(response_gl)
 
-            robot_paths = self.ltm.NC.robotTM[robot_id]
-
-            RobotNavCont_gl += robot_paths[0] + " " + robot_paths[-1] + " "
-
-            for robot_path in robot_paths:
-                path_gl += " "
-                path_gl += str(robot_path)
-            path_gl += ")"
-
-            RobotNavCont_gl += path_gl + ")"
-
-            RobotPathPlan_gl += goal[robot_id] + " " + path_gl + ")"
-
-            if "LIFT" in robot_id:
-                self.send(self.LIFT_TM_name[robot_id], RobotNavCont_gl)
-            elif "TOW" in robot_id:
-                self.send(self.TOW_TM_name[robot_id], RobotNavCont_gl)
-
-            self.send(self.SMM_name, RobotPathPlan_gl)
+    # def Control_notify(self, robot_ids, goal):
+    #     for robot_id in robot_ids:
+    #         RobotNavCont_gl = "(RobotPath \"" + robot_id + "\" "
+    #         RobotPathPlan_gl = "(RobotPathPlan \"" + robot_id + "\" "
+    #         path_gl = "(path"
+    #
+    #         robot_paths = self.ltm.NC.robotTM[robot_id]
+    #
+    #         RobotNavCont_gl += robot_paths[0] + " " + robot_paths[-1] + " "
+    #
+    #         for robot_path in robot_paths:
+    #             path_gl += " "
+    #             path_gl += str(robot_path)
+    #         path_gl += ")"
+    #
+    #         RobotNavCont_gl += path_gl + ")"
+    #
+    #         RobotPathPlan_gl += goal[robot_id] + " " + path_gl + ")"
+    #
+    #         if "LIFT" in robot_id:
+    #             self.send(self.LIFT_TM_name[robot_id], RobotNavCont_gl)
+    #         elif "TOW" in robot_id:
+    #             self.send(self.TOW_TM_name[robot_id], RobotNavCont_gl)
+    #
+    #         self.send(self.SMM_name, RobotPathPlan_gl)
 
     def Goal_check(self):
         while True:
@@ -212,41 +240,38 @@ class NavigationControlerAgent(ArbiAgent):
                     self.Goal_Status[robot_id] = False
 
     def MultiRobotPath_update(self, response_gl):
-        multipaths = {}
+        multipaths = dict()
         path_size = response_gl.get_expression_size()
         for i in range(path_size):
             robot_info = response_gl.get_expression(i).as_generalized_list()
-            robot_id = robot_info.get_expression(0).as_value()
+            robot_id = robot_info.get_expression(0).as_value().string_value()
             path_gl = robot_info.get_expression(1).as_generalized_list()
             path_size = path_gl.get_expression_size()
-            path = []
+            path = list()
             for j in range(path_size):
-                path.append(path_gl.get_expression(j).as_value())
+                path.append(path_gl.get_expression(j).as_value().int_value())
             multipaths[robot_id] = path
         self.ltm.NC.get_multipath_plan(multipaths)
             
     def MultiRobotPath_query(self, robot_id_replan):
-        query_gl = "(MultiRobotPath"
-        query_block = " (RobotPath {robot_id} {start} {goal})"
-        start_id = self.ltm.NC.robotStart
-        goal_id = self.ltm.NC.robotGoal
-        if "LIFT" in robot_id_replan[0]:
-            for robot_id in self.AMR_LIFT_IDs:
-                query_gl += query_block.format(robot_id, start_id[robot_id], goal_id[robot_id])
-                TM_name = self.LIFT_TM_name[robot_id]
-        elif "TOW" in robot_id_replan[0]:
-            for robot_id in self.AMR_TOW_IDs:
-                query_gl += query_block.format(robot_id, start_id[robot_id], goal_id[robot_id])
-                TM_name = self.TOW_TM_name[robot_id]
-        query_gl += ")"
-        
-        response = self.query(TM_name, query_gl)
+        request_gl = "(MultiRobotPath"
+
+        for robot_id in robot_id_replan:
+            start_id = self.ltm.NC.robotStart[robot_id]
+            goal_id = self.ltm.NC.robotGoal[robot_id]
+            request_gl += " (RobotPath \"" + robot_id + "\" " + str(start_id) + " " + str(goal_id) + ")"
+
+        request_gl += ")"
+
+        time.sleep(0.05)
+        response = self.request(agent_MAPF, request_gl)
+
         return response
 
 
 if __name__ == "__main__":
     agent = NavigationControlerAgent()
-    arbi_agent_excutor.execute(broker_url="tcp://172.16.165.204:61316",
+    arbi_agent_excutor.execute(broker_url=broker_url,
                                agent_name="agent://www.arbi.com/Local/NavigationController",
                                agent=agent, broker_type=2)  # same role with agent.initialize
     while True:

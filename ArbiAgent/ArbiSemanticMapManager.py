@@ -1,20 +1,22 @@
-import os
 import sys
 import time
-import threading
+import socket
+import pathlib
 from threading import Condition, Thread
-from arbi_agent.agent import arbi_agent
 
 from arbi_agent.agent.arbi_agent import ArbiAgent
-from arbi_agent.configuration import BrokerType
 from arbi_agent.ltm.data_source import DataSource
 from arbi_agent.agent import arbi_agent_excutor
 from arbi_agent.model import generalized_list_factory as GLFactory
+
+sys.path.append(str(pathlib.Path(__file__).parent.parent.resolve()))
 
 from MapManagement.MapMOS import MapMOS
 from MapManagement.MapCloudlet import MapCloudlet
 from DataType.RobotInfo import RobotInfo
 from DataType.CallInfo import CallInfo
+
+broker_url = "tcp://" + str(socket.gethostbyname(socket.gethostname())) + ":61316"
 
 
 class MapManagerDataSource(DataSource):
@@ -23,7 +25,7 @@ class MapManagerDataSource(DataSource):
         self.broker = broker_url
         self.connect(self.broker, "ds://www.arbi.com/Local/MapManager", 2)
 
-        self.map_file = "../data/map_cloud.txt"
+        self.map_file = str(pathlib.Path(__file__).parent.parent.resolve()) + "/data/map_cloud.txt"
         self.MAP = MapMOS(self.map_file)
 
         self.sub_RobotInfo_ID = self.subscribe(
@@ -33,19 +35,15 @@ class MapManagerDataSource(DataSource):
         time.sleep(0.05)
         self.sub_MosPersonCall_ID = self.subscribe(
             "(rule (fact (MosPersonCall $locationID $callID)) --> (notify (MosPersonCall $locationID $callID)))")
+        time.sleep(0.05)
 
-        # self.AMR_LIFT_IDs = ["AMR_LIFT1", "AMR_LIFT2"]
-        # self.AMR_TOW_IDs = ["AMR_TOW1", "AMR_TOW2"]
-        self.AMR_LIFT_IDs = ["AMR_LIFT2"]
-        self.AMR_TOW_IDs = []
+        self.AMR_LIFT_IDs = ["AMR_LIFT1", "AMR_LIFT2"]
+        self.AMR_TOW_IDs = ["AMR_TOW1", "AMR_TOW2"]
 
-        # self.AMR_IDs = ["AMR_LIFT1", "AMR_LIFT2", "AMR_TOW1", "AMR_TOW2"]
-        self.AMR_IDs = ["AMR_LIFT2"]
+        self.AMR_IDs = ["AMR_LIFT1", "AMR_LIFT2", "AMR_TOW1", "AMR_TOW2"]
 
-        # self.AMR_LIFT_init = {"AMR_LIFT1": 101, "AMR_LIFT2": 102}
-        # self.AMR_TOW_init = {"AMR_TOW1": 103, "AMR_TOW2": 104}
-        self.AMR_LIFT_init = {"AMR_LIFT2": 102}
-        self.AMR_TOW_init = {}
+        self.AMR_LIFT_init = {"AMR_LIFT1": 101, "AMR_LIFT2": 102}
+        self.AMR_TOW_init = {"AMR_TOW1": 103, "AMR_TOW2": 104}
 
         self.Rack_LIFT_init = {'RACK_LIFT0': 1, 'RACK_LIFT1': 2, 'RACK_LIFT2': 7,
                                'RACK_LIFT3': 12, 'RACK_LIFT4': 14, 'RACK_LIFT5': 9}
@@ -57,6 +55,7 @@ class MapManagerDataSource(DataSource):
 
     def on_notify(self, content):
         print("on notify! " + content)
+        time.sleep(0.05)
         gl_notify = GLFactory.new_gl_from_gl_string(content)
 
         if gl_notify.get_name() == "RobotInfo":
@@ -133,40 +132,38 @@ class MapManagerAgent(ArbiAgent):
         self.robot_goal = {}
 
     def on_start(self):
-        self.ltm = MapManagerDataSource("tcp://172.16.165.204:61316")
+        self.ltm = MapManagerDataSource(broker_url)
 
-        time.sleep(10)  # Wait for ltm initialization
+        time.sleep(3)  # Wait for ltm initialization
 
         # Notification Thread
 
-        input("Press enter to start")
-
-        # Thread(target=self.CargoPose_notify, args=(self.CM_name, ), daemon=True).start()
-        # time.sleep(0.5)
-        # Thread(target=self.RackPose_notify, args=(self.CM_name, ), daemon=True).start()
-        # time.sleep(0.5)
-        # Thread(target=self.MultiRobotPose_notify, args=(self.NC_name, ), daemon=True).start()
-        # time.sleep(0.5)
-        # Thread(target=self.Collidable_notify, args=(self.NC_name, ), daemon=True).start()
-        # time.sleep(0.5)
-        # Thread(target=self.DoorStatus_notify, args=(self.CM_name, ), daemon=True).start()
-        # time.sleep(0.05)
+        Thread(target=self.CargoPose_notify, args=(self.CM_name, ), daemon=True).start()
+        time.sleep(0.05)
+        Thread(target=self.RackPose_notify, args=(self.CM_name, ), daemon=True).start()
+        time.sleep(0.05)
+        Thread(target=self.MultiRobotPose_notify, args=(self.NC_name, ), daemon=True).start()
+        time.sleep(0.05)
+        Thread(target=self.Collidable_notify, args=(self.NC_name, ), daemon=True).start()
+        time.sleep(0.05)
         Thread(target=self.RobotPose_notify, args=(), daemon=True).start()
+        time.sleep(0.05)
+
+        # Thread(target=self.DoorStatus_notify, args=(self.CM_name, ), daemon=True).start()
 
         #TODO RobotCM에 보내는 정보 추가
         # self.RobotPathLeft_notify(self.NC_name)
 
     def close(self):
         self.ltm.unsubscribe(self.sub_RobotInfo_ID)
-        time.sleep(0.5)
         self.ltm.unsubscribe(self.sub_DoorStatus_ID)
-        time.sleep(0.5)
         self.ltm.unsubscribe(self.sub_MosPersonCall_ID)
         self.ltm.close()
         super().close()
 
     def on_notify(self, sender, notification):
         print("on notify! from", sender, notification)
+        time.sleep(0.05)
         temp_gl = GLFactory.new_gl_from_gl_string(notification)
         if temp_gl.get_name() == "RobotPathPlan":  # Notify from Navigation Controller Agent
             temp_path = []
@@ -184,10 +181,10 @@ class MapManagerAgent(ArbiAgent):
 
     def CargoPose_notify(self, consumer):
         while True:
-            time.sleep(5)
+            time.sleep(1)
             temp_Cargo_info = self.ltm.MM.CARGO
             for id in temp_Cargo_info.keys():
-                time.sleep(0.5)
+                time.sleep(0.05)
                 if id != -1:
                     ### Cargo_id != -1 ###
                     temp_Cargo_id = id
@@ -207,17 +204,21 @@ class MapManagerAgent(ArbiAgent):
                         status=temp_Cargo_status
                     )
                     self.notify(consumer, gl)
+                    time.sleep(0.05)
                     self.ltm.assert_fact(gl)
                 else:
                     pass
 
+            #TODO tmp
+            break
+
     def RackPose_notify(self, consumer):
         while True:
-            time.sleep(5)
+            time.sleep(1)
             temp_RackPose_LIFT_info = self.ltm.MM.RACK_LIFT
 
             for id in temp_RackPose_LIFT_info.keys():
-                time.sleep(0.5)
+                time.sleep(0.05)
                 if id != -1:
                     ### Rack_id != -1 ###
                     temp_RackPose_LIFT_id = id
@@ -240,9 +241,12 @@ class MapManagerAgent(ArbiAgent):
                 else:
                     pass
 
+            #TODO tmp
+            break
+
             temp_RackPose_TOW_info = self.ltm.MM.RACK_TOW
             for id in temp_RackPose_TOW_info.keys():
-                time.sleep(0.5)
+                time.sleep(0.05)
                 if id != -1:
                     ### Rack_id != -1 ###
                     temp_RackPose_TOW_id = id
@@ -266,14 +270,16 @@ class MapManagerAgent(ArbiAgent):
                 else:
                     pass
 
+            #TODO tmp
+            break
+
     def MultiRobotPose_notify(self, consumer):
         while True:
-            time.sleep(5)
+            time.sleep(1)
             MultiRobotoPose_gl = "(MultiRobotPose"
             RobotPose_gl = " (RobotPose \"{robot_id}\" (vertex_id {v_id1} {v_id2}))"
             vertex_gl = "(vertex_id {v_id1} {v_id2})"
             for id in self.ltm.AMR_IDs:
-                time.sleep(0.5)
                 if "LIFT" in id:
                     temp_vertex = self.ltm.MM.AMR_LIFT[id]["vertex"][0]
                 elif "TOW" in id:
@@ -287,14 +293,17 @@ class MapManagerAgent(ArbiAgent):
             MultiRobotoPose_gl += ")"
             self.notify(consumer, MultiRobotoPose_gl)
 
+            #TODO tmp
+            break
+
     def RobotPose_notify(self):
         while True:
-            time.sleep(5)
+            time.sleep(1)
             temp_AMR_LIFT_info = self.ltm.MM.AMR_LIFT
             temp_AMR_TOW_info = self.ltm.MM.AMR_TOW
 
             for robot_id in temp_AMR_LIFT_info.keys():
-                time.sleep(0.5)
+                time.sleep(0.05)
                 temp_AMR_LIFT_vertex = temp_AMR_LIFT_info[robot_id]["vertex"][-1]
 
                 gl_template = "(RobotAt \"{robot_id}\" {v_id1} {v_id2})"
@@ -307,6 +316,7 @@ class MapManagerAgent(ArbiAgent):
                 self.notify(self.LIFT_CM_name.get(robot_id), gl)
 
             for robot_id in temp_AMR_TOW_info.keys():
+                time.sleep(0.05)
                 temp_AMR_TOW_vertex = temp_AMR_TOW_info[robot_id]["vertex"][-1]
 
                 gl_template = "(RobotAt \"{robot_id}\" {v_id1} {v_id2})"
@@ -318,9 +328,12 @@ class MapManagerAgent(ArbiAgent):
                 print("notify! to", self.TOW_CM_name.get(robot_id), gl)
                 self.notify(self.TOW_CM_name.get(robot_id), gl)
 
+            #TODO tmp
+            break
+
     def Collidable_notify(self, consumer):
         while True:
-            time.sleep(5)
+            time.sleep(1)
             ### Timestamp ###
             temp_Collidable_info = self.ltm.MM.detect_collision(3)
             temp_Collidable_num = len(temp_Collidable_info)
@@ -328,7 +341,6 @@ class MapManagerAgent(ArbiAgent):
             temp_Collidable_block = " (pair \"{robot_id1}\" \"{robot_id2}\" {time})"
 
             for i in range(temp_Collidable_num):
-                time.sleep(0.5)
                 temp_robot_id_1 = self.ltm.AMR_IDs.index(temp_Collidable_info[i][0])
                 temp_robot_id_2 = self.ltm.AMR_IDs.index(temp_Collidable_info[i][1])
 
@@ -341,6 +353,9 @@ class MapManagerAgent(ArbiAgent):
 
             self.notify(consumer, temp_notify.format(num=temp_Collidable_num))
 
+            #TODO tmp
+            break
+
     def DoorStatus_notify(self, consumer):
         while True:
             time.sleep(1)
@@ -350,6 +365,9 @@ class MapManagerAgent(ArbiAgent):
             temp_gl = "(DoorStatus \"{status}\")"
 
             self.notify(consumer, temp_gl.format(status=temp_Door_status))
+
+            #TODO tmp
+            break
 
     # def RobotPathLeft_notify(self, consumer):
     #     temp_AMR_LIFT_Path = self.ltm.MM.Path_AMR_LIFT
@@ -379,6 +397,8 @@ class MapManagerAgent(ArbiAgent):
 
 
     def on_query(self, sender, query):
+        print("on query : " + query)
+        time.sleep(0.05)
         gl_query = GLFactory.new_gl_from_gl_string(query)
         query_name = gl_query.get_name()
 
@@ -403,6 +423,7 @@ class MapManagerAgent(ArbiAgent):
             return temp_response.format(temp_Collidable_num)
 
         elif query_name == "RobotSpecInfo":  # From Local TA
+            print("here1")
             temp_robot_num = gl_query.get_expression_size()
             temp_response = "(RobotSpecInfo"
             temp_robotinfo_block = " (RobotInfo \"{robot_id}\" (vertex_id {v_id1} {v_id2}) {load} \"{goal}\")"
@@ -422,19 +443,29 @@ class MapManagerAgent(ArbiAgent):
                                      " (vertex_id " + str(temp_TOW_vertex[0]) + " " + str(temp_TOW_vertex[1]) + ")" + \
                                      " " + str(temp_TOW_load) + " \"" + str(temp_TOW_goal) + "\")"
                 elif "LIFT" in temp_robot_id:
+                    print(temp_robot_id)
+                    print("here")
+                    print(self.ltm.MM.AMR_LIFT)
                     temp_LIFT_info = self.ltm.MM.AMR_LIFT[temp_robot_id]
+                    print(temp_LIFT_info)
                     temp_LIFT_vertex = temp_LIFT_info['vertex'][0]
+                    print(temp_LIFT_vertex)
                     temp_LIFT_load = temp_LIFT_info['load'][0]
+                    print(temp_LIFT_load)
                     temp_LIFT_path = self.ltm.MM.Path_AMR_LIFT[temp_robot_id]
+                    print(temp_LIFT_path)
                     if temp_LIFT_path:
                         temp_LIFT_goal = temp_LIFT_path[-1]
                     elif not temp_LIFT_path:
                         temp_LIFT_goal = 0
+                    else:
+                        print("what?")
+                        temp_LIFT_goal = 0
                     temp_response += " (RobotInfo \"" + str(temp_robot_id) + "\"" + \
                                      " (vertex_id " + str(temp_LIFT_vertex[0]) + " " + str(temp_LIFT_vertex[1]) + ")" + \
                                      " " + str(temp_LIFT_load) + " \"" + str(temp_LIFT_goal) + "\")"
-
             temp_response += ")"
+            print(temp_response)
             return temp_response
 
         else:
@@ -443,7 +474,7 @@ class MapManagerAgent(ArbiAgent):
 
 if __name__ == "__main__":
     agent = MapManagerAgent()
-    arbi_agent_excutor.execute(broker_url="tcp://172.16.165.204:61316", agent_name="agent://www.arbi.com/Local/MapManager",
+    arbi_agent_excutor.execute(broker_url=broker_url, agent_name="agent://www.arbi.com/Local/MapManager",
                                agent=agent, broker_type=2)  # same role with agent.initialize
 
     while True:
