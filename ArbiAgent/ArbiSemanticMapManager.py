@@ -42,11 +42,11 @@ class MapManagerDataSource(DataSource):
 
         self.AMR_IDs = ["AMR_LIFT1", "AMR_LIFT2", "AMR_TOW1", "AMR_TOW2"]
 
-        self.AMR_LIFT_init = {"AMR_LIFT1": 101, "AMR_LIFT2": 102}
-        self.AMR_TOW_init = {"AMR_TOW1": 103, "AMR_TOW2": 104}
+        self.AMR_LIFT_init = {"AMR_LIFT1": 201, "AMR_LIFT2": 202}
+        self.AMR_TOW_init = {"AMR_TOW1": 203, "AMR_TOW2": 204}
 
-        self.Rack_LIFT_init = {'RACK_LIFT0': 1, 'RACK_LIFT1': 2, 'RACK_LIFT2': 7,
-                               'RACK_LIFT3': 12, 'RACK_LIFT4': 14, 'RACK_LIFT5': 9}
+        self.Rack_LIFT_init = {'RACK_LIFT0': 1, 'RACK_LIFT1': 2, 'RACK_LIFT2': 3,
+                               'RACK_LIFT3': 4, 'RACK_LIFT4': 5, 'RACK_LIFT5': 6}
         self.Rack_TOW_init = {'RACK_TOW0': 21, 'RACK_TOW1': 20}
 
         self.Door_init = {'Door0': 0}
