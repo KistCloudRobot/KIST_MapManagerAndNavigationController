@@ -1,6 +1,6 @@
 import sys
 import time
-import socket
+import os
 import pathlib
 from threading import Condition, Thread
 
@@ -16,7 +16,7 @@ from MapManagement.MapCloudlet import MapCloudlet
 from DataType.RobotInfo import RobotInfo
 from DataType.CallInfo import CallInfo
 
-broker_url = "tcp://" + str(socket.gethostbyname(socket.gethostname())) + ":61316"
+broker_url = 'tcp://' + os.environ["JMS_BROKER"]
 
 
 class MapManagerDataSource(DataSource):
@@ -139,15 +139,15 @@ class MapManagerAgent(ArbiAgent):
         # Notification Thread
 
         Thread(target=self.CargoPose_notify, args=(self.CM_name, ), daemon=True).start()
-        time.sleep(0.05)
+        time.sleep(0.1)
         Thread(target=self.RackPose_notify, args=(self.CM_name, ), daemon=True).start()
-        time.sleep(0.05)
+        time.sleep(0.1)
         Thread(target=self.MultiRobotPose_notify, args=(self.NC_name, ), daemon=True).start()
-        time.sleep(0.05)
+        time.sleep(0.1)
         Thread(target=self.Collidable_notify, args=(self.NC_name, ), daemon=True).start()
-        time.sleep(0.05)
+        time.sleep(0.1)
         Thread(target=self.RobotPose_notify, args=(), daemon=True).start()
-        time.sleep(0.05)
+        time.sleep(0.1)
 
         # Thread(target=self.DoorStatus_notify, args=(self.CM_name, ), daemon=True).start()
 
@@ -209,9 +209,6 @@ class MapManagerAgent(ArbiAgent):
                 else:
                     pass
 
-            #TODO tmp
-            break
-
     def RackPose_notify(self, consumer):
         while True:
             time.sleep(1)
@@ -241,9 +238,6 @@ class MapManagerAgent(ArbiAgent):
                 else:
                     pass
 
-            #TODO tmp
-            break
-
             temp_RackPose_TOW_info = self.ltm.MM.RACK_TOW
             for id in temp_RackPose_TOW_info.keys():
                 time.sleep(0.05)
@@ -270,9 +264,6 @@ class MapManagerAgent(ArbiAgent):
                 else:
                     pass
 
-            #TODO tmp
-            break
-
     def MultiRobotPose_notify(self, consumer):
         while True:
             time.sleep(1)
@@ -292,9 +283,6 @@ class MapManagerAgent(ArbiAgent):
                 )
             MultiRobotoPose_gl += ")"
             self.notify(consumer, MultiRobotoPose_gl)
-
-            #TODO tmp
-            break
 
     def RobotPose_notify(self):
         while True:
@@ -328,9 +316,6 @@ class MapManagerAgent(ArbiAgent):
                 print("notify! to", self.TOW_CM_name.get(robot_id), gl)
                 self.notify(self.TOW_CM_name.get(robot_id), gl)
 
-            #TODO tmp
-            break
-
     def Collidable_notify(self, consumer):
         while True:
             time.sleep(1)
@@ -353,9 +338,6 @@ class MapManagerAgent(ArbiAgent):
 
             self.notify(consumer, temp_notify.format(num=temp_Collidable_num))
 
-            #TODO tmp
-            break
-
     def DoorStatus_notify(self, consumer):
         while True:
             time.sleep(1)
@@ -365,9 +347,6 @@ class MapManagerAgent(ArbiAgent):
             temp_gl = "(DoorStatus \"{status}\")"
 
             self.notify(consumer, temp_gl.format(status=temp_Door_status))
-
-            #TODO tmp
-            break
 
     # def RobotPathLeft_notify(self, consumer):
     #     temp_AMR_LIFT_Path = self.ltm.MM.Path_AMR_LIFT

@@ -1,6 +1,6 @@
 import sys
 import time
-import socket
+import os
 import pathlib
 from threading import Condition, Thread
 
@@ -15,7 +15,7 @@ from MapManagement.MapMOS import MapMOS
 from NavigationControl.NavigationControl import NavigationControl
 
 agent_MAPF = "agent://www.arbi.com/Local/MultiAgentPathFinder"
-broker_url = "tcp://" + str(socket.gethostbyname(socket.gethostname())) + ":61316"
+broker_url = 'tcp://' + os.environ["JMS_BROKER"]
 
 
 class NavigationControlerDataSource(DataSource):
