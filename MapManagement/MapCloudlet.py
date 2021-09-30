@@ -64,13 +64,19 @@ class MapCloudlet:
             self.Door[id] = {'timestamp': [t_init], 'status': [0]}
 
     def update_MOS_robot_info(self, info):  # call this function when robot_information is updated by MOS
+        print("here1``````````````````")
         if info.id in self.AMR_LIFT_IDs:
+            print("here2``````````````````")
             info.vertex = self.convert_pose_to_vertex(info.pos)
             if self.robot_update_rule(self.AMR_LIFT, info):  # if the update rule is satisfied
-                self.AMR_LIFT[info.id]['timestamp'].append(info.timestamp)
-                self.AMR_LIFT[info.id]['pos'].append(info.pos)
-                self.AMR_LIFT[info.id]['vertex'].append(info.vertex)
-                self.AMR_LIFT[info.id]['load'].append(info.load)
+                print("here3``````````````````")
+                self.AMR_LIFT[info.id]['timestamp'].insert(0, info.timestamp)
+                self.AMR_LIFT[info.id]['pos'].insert(0,info.pos)
+                self.AMR_LIFT[info.id]['vertex'].insert(0,info.vertex)
+                self.AMR_LIFT[info.id]['load'].insert(0,info.load)
+                print(str(info.id))
+                print(str(self.AMR_LIFT[info.id]['vertex']))
+                print("here4``````````````````")
 
                 # update loaded/unloaded objects
                 if info.load == 1:
@@ -82,54 +88,54 @@ class MapCloudlet:
                                    self.search_obj_at_vertex(self.CARGO, info.vertex)]
 
                     # update the lift
-                    self.AMR_LIFT[info.id]['load_id'].append(load_id)
+                    self.AMR_LIFT[info.id]['load_id'].insert(0,load_id)
 
                     # update the rack_lift
                     if load_id[0] != -1:  # a robot is carrying a rack
                         id = load_id[0]
-                        self.RACK_LIFT[id]['timestamp'].append(info.timestamp)
-                        self.RACK_LIFT[id]['pos'].append(info.pos)
-                        self.RACK_LIFT[id]['vertex'].append(info.vertex)
-                        self.RACK_LIFT[id]['load_id'].append([info.id, load_id[1]])
+                        self.RACK_LIFT[id]['timestamp'].insert(0,info.timestamp)
+                        self.RACK_LIFT[id]['pos'].insert(0, info.pos)
+                        self.RACK_LIFT[id]['vertex'].insert(0,info.vertex)
+                        self.RACK_LIFT[id]['load_id'].insert(0,[info.id, load_id[1]])
 
                     # update the state of cargos that a robot is carrying
                     if load_id[1] != -1:
                         id = load_id[1]
-                        self.CARGO[id]['timestamp'].append(info.timestamp)
-                        self.CARGO[id]['pos'].append(info.pos)
-                        self.CARGO[id]['vertex'].append(info.vertex)
-                        self.CARGO[id]['load_id'].append([info.id, load_id[0]])
+                        self.CARGO[id]['timestamp'].insert(0,info.timestamp)
+                        self.CARGO[id]['pos'].insert(0,info.pos)
+                        self.CARGO[id]['vertex'].insert(0,info.vertex)
+                        self.CARGO[id]['load_id'].insert(0,[info.id, load_id[0]])
 
                 elif info.load == 0 and self.AMR_LIFT[info.id]['load'][-2] == 1:  # unload the rack now
-                    self.AMR_LIFT[info.id]['load_id'].append([-1, -1])
+                    self.AMR_LIFT[info.id]['load_id'].insert(0,[-1, -1])
 
                     # rack id and cargo id before unloading
                     rack_id = self.AMR_LIFT[info.id]['load_id'][-2][0]
                     cargo_id = self.AMR_LIFT[info.id]['load_id'][-2][1]
                     # update the rack_lift
-                    self.RACK_LIFT[rack_id]['timestamp'].append(info.timestamp)
-                    self.RACK_LIFT[rack_id]['pos'].append(info.pos)
-                    self.RACK_LIFT[rack_id]['vertex'].append(info.vertex)
-                    self.RACK_LIFT[rack_id]['load_id'].append([-1, cargo_id])  # change this state
+                    self.RACK_LIFT[rack_id]['timestamp'].insert(0,info.timestamp)
+                    self.RACK_LIFT[rack_id]['pos'].insert(0,info.pos)
+                    self.RACK_LIFT[rack_id]['vertex'].insert(0,info.vertex)
+                    self.RACK_LIFT[rack_id]['load_id'].insert(0,[-1, cargo_id])  # change this state
 
                     # update the state of cargos that a robot is carrying
                     if cargo_id != -1:
-                        self.CARGO[cargo_id]['timestamp'].append(info.timestamp)
-                        self.CARGO[cargo_id]['pos'].append(info.pos)
-                        self.CARGO[cargo_id]['vertex'].append(info.vertex)
-                        self.CARGO[cargo_id]['load_id'].append([-1, rack_id])
+                        self.CARGO[cargo_id]['timestamp'].insert(0,info.timestamp)
+                        self.CARGO[cargo_id]['pos'].insert(0,info.pos)
+                        self.CARGO[cargo_id]['vertex'].insert(0,info.vertex)
+                        self.CARGO[cargo_id]['load_id'].insert(0,[-1, rack_id])
 
                 else:
-                    self.AMR_LIFT[info.id]['load_id'].append([-1, -1])
+                    self.AMR_LIFT[info.id]['load_id'].insert(0,[-1, -1])
 
         # update tow
         elif info.id in self.AMR_TOW_IDs:
             info.vertex = self.convert_pose_to_vertex(info.pos)
             if self.robot_update_rule(self.AMR_TOW, info):  # if the update rule is satisfied
-                self.AMR_TOW[info.id]['timestamp'].append(info.timestamp)
-                self.AMR_TOW[info.id]['pos'].append(info.pos)
-                self.AMR_TOW[info.id]['vertex'].append(info.vertex)
-                self.AMR_TOW[info.id]['load'].append(info.load)
+                self.AMR_TOW[info.id]['timestamp'].insert(0,info.timestamp)
+                self.AMR_TOW[info.id]['pos'].insert(0,info.pos)
+                self.AMR_TOW[info.id]['vertex'].insert(0,info.vertex)
+                self.AMR_TOW[info.id]['load'].insert(0,info.load)
 
                 # update loaded/unloaded objects
                 if info.load == 1:
@@ -141,45 +147,45 @@ class MapCloudlet:
                                    self.search_obj_at_vertex(self.CARGO, info.vertex)]
 
                     # update the TOW
-                    self.AMR_TOW[info.id]['load_id'].append(load_id)
+                    self.AMR_TOW[info.id]['load_id'].insert(0,load_id)
 
                     # update the rack_TOW
                     if load_id[0] != -1:  # a robot is carrying a rack
                         id = load_id[0]
-                        self.RACK_TOW[id]['timestamp'].append(info.timestamp)
-                        self.RACK_TOW[id]['pos'].append(info.pos)
-                        self.RACK_TOW[id]['vertex'].append(info.vertex)
-                        self.RACK_TOW[id]['load_id'].append([info.id, load_id[1]])
+                        self.RACK_TOW[id]['timestamp'].insert(0,info.timestamp)
+                        self.RACK_TOW[id]['pos'].insert(0,info.pos)
+                        self.RACK_TOW[id]['vertex'].insert(0,info.vertex)
+                        self.RACK_TOW[id]['load_id'].insert(0,[info.id, load_id[1]])
 
                     # update the state of cargos that a robot is carrying
                     if load_id[1] != -1:
                         id = load_id[1]
-                        self.CARGO[id]['timestamp'].append(info.timestamp)
-                        self.CARGO[id]['pos'].append(info.pos)
-                        self.CARGO[id]['vertex'].append(info.vertex)
-                        self.CARGO[id]['load_id'].append([info.id, load_id[0]])
+                        self.CARGO[id]['timestamp'].insert(0,info.timestamp)
+                        self.CARGO[id]['pos'].insert(0,info.pos)
+                        self.CARGO[id]['vertex'].insert(0,info.vertex)
+                        self.CARGO[id]['load_id'].insert(0,[info.id, load_id[0]])
 
                 elif info.load == 0 and self.AMR_TOW[info.id]['load'][-2] == 1:  # unload the rack now
-                    self.AMR_TOW[info.id]['load_id'].append([-1, -1])
+                    self.AMR_TOW[info.id]['load_id'].insert(0,[-1, -1])
 
                     # rack id and cargo id before unloading
                     rack_id = self.AMR_TOW[info.id]['load_id'][-2][0]
                     cargo_id = self.AMR_TOW[info.id]['load_id'][-2][1]
                     # update the rack_tow
-                    self.RACK_TOW[rack_id]['timestamp'].append(info.timestamp)
-                    self.RACK_TOW[rack_id]['pos'].append(info.pos)
-                    self.RACK_TOW[rack_id]['vertex'].append(info.vertex)
-                    self.RACK_TOW[rack_id]['load_id'].append([-1, cargo_id])  # change this state
+                    self.RACK_TOW[rack_id]['timestamp'].insert(0,info.timestamp)
+                    self.RACK_TOW[rack_id]['pos'].insert(0,info.pos)
+                    self.RACK_TOW[rack_id]['vertex'].insert(0,info.vertex)
+                    self.RACK_TOW[rack_id]['load_id'].insert(0,[-1, cargo_id])  # change this state
 
                     # update the state of cargos that a robot is carrying
                     if cargo_id != -1:
-                        self.CARGO[cargo_id]['timestamp'].append(info.timestamp)
-                        self.CARGO[cargo_id]['pos'].append(info.pos)
-                        self.CARGO[cargo_id]['vertex'].append(info.vertex)
-                        self.CARGO[cargo_id]['load_id'].append([-1, rack_id])
+                        self.CARGO[cargo_id]['timestamp'].insert(0,info.timestamp)
+                        self.CARGO[cargo_id]['pos'].insert(0,info.pos)
+                        self.CARGO[cargo_id]['vertex'].insert(0,info.vertex)
+                        self.CARGO[cargo_id]['load_id'].insert(0,[-1, rack_id])
 
                 else:
-                    self.AMR_TOW[info.id]['load_id'].append([-1, -1])
+                    self.AMR_TOW[info.id]['load_id'].insert(0,[-1, -1])
 
         self.update_NAV_PLAN(info.id)
 

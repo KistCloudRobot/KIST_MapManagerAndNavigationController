@@ -45,8 +45,8 @@ class MapManagerDataSource(DataSource):
         self.AMR_LIFT_init = {"AMR_LIFT1": 201, "AMR_LIFT2": 202}
         self.AMR_TOW_init = {"AMR_TOW1": 203, "AMR_TOW2": 204}
 
-        self.Rack_LIFT_init = {'RACK_LIFT0': 1, 'RACK_LIFT1': 2, 'RACK_LIFT2': 3,
-                               'RACK_LIFT3': 4, 'RACK_LIFT4': 5, 'RACK_LIFT5': 6}
+        self.Rack_LIFT_init = {'RACK_LIFT0': 5, 'RACK_LIFT1': 13, 'RACK_LIFT2': 14,
+                               'RACK_LIFT3': 15, 'RACK_LIFT4': 18, 'RACK_LIFT5': 19}
         self.Rack_TOW_init = {'RACK_TOW0': 21, 'RACK_TOW1': 20}
 
         self.Door_init = {'Door0': 0}
@@ -136,7 +136,7 @@ class MapManagerAgent(ArbiAgent):
 
         time.sleep(3)  # Wait for ltm initialization
 
-        # Notification Thread
+        # Notification ThreadTow1
 
         Thread(target=self.CargoPose_notify, args=(self.CM_name, ), daemon=True).start()
         time.sleep(0.1)
@@ -292,20 +292,18 @@ class MapManagerAgent(ArbiAgent):
 
             for robot_id in temp_AMR_LIFT_info.keys():
                 time.sleep(0.05)
-                temp_AMR_LIFT_vertex = temp_AMR_LIFT_info[robot_id]["vertex"][-1]
-
+                temp_AMR_LIFT_vertex = temp_AMR_LIFT_info[robot_id]["vertex"][0]
                 gl_template = "(RobotAt \"{robot_id}\" {v_id1} {v_id2})"
                 gl = gl_template.format(
                     robot_id=robot_id,
                     v_id1=temp_AMR_LIFT_vertex[0],
                     v_id2=temp_AMR_LIFT_vertex[1]
                 )
-                print("notify! to", self.LIFT_CM_name.get(robot_id), gl)
                 self.notify(self.LIFT_CM_name.get(robot_id), gl)
 
             for robot_id in temp_AMR_TOW_info.keys():
                 time.sleep(0.05)
-                temp_AMR_TOW_vertex = temp_AMR_TOW_info[robot_id]["vertex"][-1]
+                temp_AMR_TOW_vertex = temp_AMR_TOW_info[robot_id]["vertex"][0]
 
                 gl_template = "(RobotAt \"{robot_id}\" {v_id1} {v_id2})"
                 gl = gl_template.format(
@@ -313,7 +311,6 @@ class MapManagerAgent(ArbiAgent):
                     v_id1=temp_AMR_TOW_vertex[0],
                     v_id2=temp_AMR_TOW_vertex[1]
                 )
-                print("notify! to", self.TOW_CM_name.get(robot_id), gl)
                 self.notify(self.TOW_CM_name.get(robot_id), gl)
 
     def Collidable_notify(self, consumer):
@@ -402,7 +399,6 @@ class MapManagerAgent(ArbiAgent):
             return temp_response.format(temp_Collidable_num)
 
         elif query_name == "RobotSpecInfo":  # From Local TA
-            print("here1")
             temp_robot_num = gl_query.get_expression_size()
             temp_response = "(RobotSpecInfo"
             temp_robotinfo_block = " (RobotInfo \"{robot_id}\" (vertex_id {v_id1} {v_id2}) {load} \"{goal}\")"
@@ -422,29 +418,20 @@ class MapManagerAgent(ArbiAgent):
                                      " (vertex_id " + str(temp_TOW_vertex[0]) + " " + str(temp_TOW_vertex[1]) + ")" + \
                                      " " + str(temp_TOW_load) + " \"" + str(temp_TOW_goal) + "\")"
                 elif "LIFT" in temp_robot_id:
-                    print(temp_robot_id)
-                    print("here")
-                    print(self.ltm.MM.AMR_LIFT)
                     temp_LIFT_info = self.ltm.MM.AMR_LIFT[temp_robot_id]
-                    print(temp_LIFT_info)
                     temp_LIFT_vertex = temp_LIFT_info['vertex'][0]
-                    print(temp_LIFT_vertex)
                     temp_LIFT_load = temp_LIFT_info['load'][0]
-                    print(temp_LIFT_load)
                     temp_LIFT_path = self.ltm.MM.Path_AMR_LIFT[temp_robot_id]
-                    print(temp_LIFT_path)
                     if temp_LIFT_path:
                         temp_LIFT_goal = temp_LIFT_path[-1]
                     elif not temp_LIFT_path:
                         temp_LIFT_goal = 0
                     else:
-                        print("what?")
                         temp_LIFT_goal = 0
                     temp_response += " (RobotInfo \"" + str(temp_robot_id) + "\"" + \
                                      " (vertex_id " + str(temp_LIFT_vertex[0]) + " " + str(temp_LIFT_vertex[1]) + ")" + \
                                      " " + str(temp_LIFT_load) + " \"" + str(temp_LIFT_goal) + "\")"
             temp_response += ")"
-            print(temp_response)
             return temp_response
 
         else:

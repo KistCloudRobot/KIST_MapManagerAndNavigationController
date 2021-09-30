@@ -94,8 +94,9 @@ class NavigationControlerAgent(ArbiAgent):
         print("on notify from " + sender + " notification : " + notification)
         temp_gl = GLFactory.new_gl_from_gl_string(notification)
         gl_name = temp_gl.get_name()
-
-        if gl_name == "MultiRobotPose":
+        result = gl_name == "MultiRobotPose"
+        print(result)
+        if result:
             # temp_robotID = self.ltm.NC.AMR_IDs[temp_gl.get_expression(0).as_value()]
             # temp_vertex_info = temp_gl.get_expression(1).as_generalized_list()
             # temp_vertex_1 = temp_vertex_info.get_expression(0).as_value()
@@ -107,6 +108,7 @@ class NavigationControlerAgent(ArbiAgent):
             # self.ltm.NC.update_robot_TM(temp_robot_pose)
             robot_num = temp_gl.get_expression_size()
             multi_robot_pose = {}
+
             for i in range(robot_num):
                 robot_gl = temp_gl.get_expression(i).as_generalized_list()
                 robot_id = robot_gl.get_expression(0).as_value().string_value()
@@ -115,11 +117,10 @@ class NavigationControlerAgent(ArbiAgent):
                                 robot_vertex_gl.get_expression(1).as_value().int_value()]
                 multi_robot_pose[robot_id] = robot_vertex
                 self.cur_robot_pose[robot_id] = robot_vertex
-
             robot_sendTM = self.ltm.NC.update_robot_TM(multi_robot_pose)
             if robot_sendTM:
                 self.Control_notify(robot_sendTM, self.robot_goal)
-                    
+                   
         elif gl_name == "Collidable":
             collide_num = temp_gl.get_expression(0).as_value().int_value()
             for i in range(collide_num):
@@ -156,13 +157,18 @@ class NavigationControlerAgent(ArbiAgent):
     def on_request(self, sender, request):
         print("on request : " + request)
         gl = GLFactory.new_gl_from_gl_string(request)
-        if gl.get_name() == "RobotPath":
+        print(str(request))
+        result =  gl.get_name() == "RobotPath"
+
+        print(result)
+        if result:
             response = self.handle_multi_robot_path(gl)
             robot_path = str(response.get_expression(0).as_generalized_list())
-            print("response :", robot_path)
+            print("here333==========================")
+            print("response :", str(robot_path))
             return robot_path
         else:
-            print("what?", gl)
+            print("what?", str(gl))
             return "(fail)"
 
     def handle_multi_robot_path(self, gl):
@@ -171,12 +177,25 @@ class NavigationControlerAgent(ArbiAgent):
         goal_vertex = gl.get_expression(2).as_value().int_value()
         goal[goal_robot_id] = goal_vertex
         self.robot_goal[goal_robot_id] = goal_vertex
-        robot_id_replan, robot_id_TM = self.ltm.NC.allocate_goal(goal, self.cur_robot_pose)
+        '''
+        start_id = self.ltm.NC.robotStart[goal_robot_id]
+        goal_id = self.ltm.NC.robotGoal[goal_robot_id]
+        print("here7==========================")
+        print("here8==========================")
+        start_id = self.ltm.NC.robotStart[goal_robot_id]
+        print("here9==========================")
+        goal_id = self.ltm.NC.robotGoal[goal_robot_id]
+        print("here10==========================")
+        '''
 
+        print("here5==========================")
+        robot_id_replan, robot_id_TM = self.ltm.NC.allocate_goal(goal, self.cur_robot_pose)
+        print("here6==========================")
         # TODO pause GL 생각하기
         # self.send(robot_id, (""))
 
         response = self.MultiRobotPath_query(robot_id_replan)
+        print("here11==========================")
         response_gl = GLFactory.new_gl_from_gl_string(response)
         self.MultiRobotPath_update(response_gl)
         return response_gl
