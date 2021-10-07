@@ -15,7 +15,8 @@ from MapManagement.MapMOS import MapMOS
 from NavigationControl.NavigationControl import NavigationControl
 
 agent_MAPF = "agent://www.arbi.com/Local/MultiAgentPathFinder"
-broker_url = 'tcp://' + os.environ["JMS_BROKER"]
+broker_url = "tcp://127.0.0.1:61316"
+# broker_url = 'tcp://' + os.environ["JMS_BROKER"]
 
 
 class NavigationControlerDataSource(DataSource):

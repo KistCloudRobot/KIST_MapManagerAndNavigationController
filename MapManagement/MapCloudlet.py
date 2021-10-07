@@ -64,19 +64,13 @@ class MapCloudlet:
             self.Door[id] = {'timestamp': [t_init], 'status': [0]}
 
     def update_MOS_robot_info(self, info):  # call this function when robot_information is updated by MOS
-        print("here1``````````````````")
         if info.id in self.AMR_LIFT_IDs:
-            print("here2``````````````````")
             info.vertex = self.convert_pose_to_vertex(info.pos)
             if self.robot_update_rule(self.AMR_LIFT, info):  # if the update rule is satisfied
-                print("here3``````````````````")
                 self.AMR_LIFT[info.id]['timestamp'].insert(0, info.timestamp)
                 self.AMR_LIFT[info.id]['pos'].insert(0,info.pos)
                 self.AMR_LIFT[info.id]['vertex'].insert(0,info.vertex)
                 self.AMR_LIFT[info.id]['load'].insert(0,info.load)
-                print(str(info.id))
-                print(str(self.AMR_LIFT[info.id]['vertex']))
-                print("here4``````````````````")
 
                 # update loaded/unloaded objects
                 if info.load == 1:
