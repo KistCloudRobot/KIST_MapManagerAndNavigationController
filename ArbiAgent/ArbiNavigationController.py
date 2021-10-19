@@ -3,7 +3,7 @@ import time
 import os
 import pathlib
 from threading import Condition, Thread
-
+sys.path.append("D:\CloudRobot\Python-mcArbiFramework")
 from arbi_agent.agent.arbi_agent import ArbiAgent
 from arbi_agent.ltm.data_source import DataSource
 from arbi_agent.agent import arbi_agent_excutor
@@ -55,13 +55,37 @@ class NavigationControlerAgent(ArbiAgent):
             "AMR_TOW1": "agent://www.arbi.com/Tow1/TaskManager",
             "AMR_TOW2": "agent://www.arbi.com/Tow2/TaskManager"
         }
+        self.TM_name = {
+            "AMR_LIFT1": "agent://www.arbi.com/Lift1/TaskManager",
+            "AMR_LIFT2": "agent://www.arbi.com/Lift2/TaskManager",
+            "AMR_TOW1": "agent://www.arbi.com/Tow1/TaskManager",
+            "AMR_TOW2": "agent://www.arbi.com/Tow2/TaskManager"
+        }
+        self.TM_actionID = {
+            "AMR_LIFT1": ["\"1\"", "\"5\""],
+            "AMR_LIFT2": ["\"2\"", "\"6\""],
+            "AMR_TOW1": ["\"3\"", "\"7\""],
+            "AMR_TOW2": ["\"4\"", "\"8\""]
+        }
+        self.TM_switch = {
+            "AMR_LIFT1": False,
+            "AMR_LIFT2": False,
+            "AMR_TOW1": False,
+            "AMR_TOW2": False
+        }
         self.SMM_name = "agent://SMM" # name of SMM
-        self.cur_robot_pose = {}
         self.AMR_LIFT_IDs = ["AMR_LIFT1", "AMR_LIFT2"]
         self.AMR_TOW_IDs = ["AMR_TOW1", "AMR_TOW2"]
         self.AMR_IDs = ["AMR_LIFT1", "AMR_LIFT2", "AMR_TOW1", "AMR_TOW2"]
+        self.cur_robot_pose = {}
         self.robot_goal = {}
-        self.Goal_Status = {}
+        # self.robot_path = {}
+        self.goal_index = {
+            "AMR_LIFT1": 0,
+            "AMR_LIFT2": 0,
+            "AMR_TOW1": 0,
+            "AMR_TOW2": 0
+        }
         
     def on_start(self):
         self.ltm = NavigationControlerDataSource(broker_url)
@@ -70,43 +94,14 @@ class NavigationControlerAgent(ArbiAgent):
         time.sleep(1)
 
         Thread(target=self.Goal_check, args=(), daemon=True).start()
-    
-    def on_data(self, sender, data):
-        print("on data from " + sender + " notification : " + data)
-        temp_gl = GLFactory.new_gl_from_gl_string(data)
-        if temp_gl.get_name() == "MultiRobotPath":
-            multi_robot_path = {}
-            temp_gl_robot_num = temp_gl.get_expression_size()
-            for i in range(temp_gl_robot_num):
-                temp_robot_path = temp_gl.get_expression(i).as_generalized_list()
-                temp_robot_id = temp_robot_path.get_expression(0)
-
-                temp_gl_path = temp_robot_path.get_expression(1).as_generalized_list()
-                temp_gl_path_size = temp_gl_path.get_expression_size()
-                for j in range(temp_gl_path_size):
-                    temp_path = []
-                    temp_path.append(temp_gl_path.get_expression(j))
-
-                multi_robot_path[temp_robot_id] = temp_path
-            
-            self.ltm.NC.get_multipath_plan(multi_robot_path)
 
     def on_notify(self, sender, notification):
         print("on notify from " + sender + " notification : " + notification)
         temp_gl = GLFactory.new_gl_from_gl_string(notification)
         gl_name = temp_gl.get_name()
-        result = gl_name == "MultiRobotPose"
+        result = (gl_name == "MultiRobotPose")
         print(result)
         if result:
-            # temp_robotID = self.ltm.NC.AMR_IDs[temp_gl.get_expression(0).as_value()]
-            # temp_vertex_info = temp_gl.get_expression(1).as_generalized_list()
-            # temp_vertex_1 = temp_vertex_info.get_expression(0).as_value()
-            # temp_vertex_2 = temp_vertex_info.get_expression(1).as_value()
-
-            # temp_robot_pose = {}
-            # temp_robot_pose[temp_robotID] = [temp_vertex_1, temp_vertex_2]
-            # self.cur_robot_pose[temp_robotID] = temp_robot_pose[temp_robotID]
-            # self.ltm.NC.update_robot_TM(temp_robot_pose)
             robot_num = temp_gl.get_expression_size()
             multi_robot_pose = {}
 
@@ -118,9 +113,12 @@ class NavigationControlerAgent(ArbiAgent):
                                 robot_vertex_gl.get_expression(1).as_value().int_value()]
                 multi_robot_pose[robot_id] = robot_vertex
                 self.cur_robot_pose[robot_id] = robot_vertex
+
             robot_sendTM = self.ltm.NC.update_robot_TM(multi_robot_pose)
+
             if robot_sendTM:
-                self.Control_notify(robot_sendTM, self.robot_goal)
+                for robot_id in robot_sendTM:
+                    self.Control_request(robot_id)
                    
         elif gl_name == "Collidable":
             collide_num = temp_gl.get_expression(0).as_value().int_value()
@@ -129,135 +127,114 @@ class NavigationControlerAgent(ArbiAgent):
                 robot_ids = [temp_collide_gl.get_expression(0).as_value().string_value(), temp_collide_gl.get_expression(1).as_value().string_value()]
                 self.ltm.NC.update_start_goal_collision(robot_ids)
 
-                for i in range(2):
-                    RobotNavCont_gl = "(RobotPath \"" + robot_id + "\" " + robot_path[0] + " " + robot_path[-1] + " "
-                    RobotPathPlan_gl = "(RobotPathPlan \"" + robot_id + " "
-
-                    robot_id = robot_ids[i]
-                    robot_path = self.ltm.NC.robotTM[robot_id]
-                    goal = self.ltm.NC.robotGoal[robot_id]
-                    path_gl = "(path"
-                    for j in range(len(robot_path)):
-                        path_gl += " "
-                        path_gl += str(robot_path[j])
-                    path_gl += ")"
-
-                    RobotNavCont_gl += path_gl + ")"
-                    RobotPathPlan_gl += goal + " " + path_gl + ")"
-
-                    if "LIFT" in robot_id:
-                        self.notify(self.LIFT_TM_name[robot_id], RobotNavCont_gl)
-                    elif "TOW" in robot_id:
-                        self.notify(self.TOW_TM_name[robot_id], RobotNavCont_gl)
-                    self.notify(self.SMM_name, RobotPathPlan_gl)
+                for robot_id in robot_ids:
+                    self.Control_request(robot_id)
+                    self.SMM_notify(robot_id)
                 
                 response_gl = self.MultiRobotPath_query(robot_ids)
                 self.MultiRobotPath_update(response_gl)
-                self.Control_notify(robot_ids)
 
     def on_request(self, sender, request):
         print("on request : " + request)
-        gl = GLFactory.new_gl_from_gl_string(request)
+        temp_gl = GLFactory.new_gl_from_gl_string(request)
         print(str(request))
-        result =  gl.get_name() == "RobotPath"
+        result = (temp_gl.get_name() == "Move")
 
-        print(result)
         if result:
-            response = self.handle_multi_robot_path(gl)
-            robot_path = str(response.get_expression(0).as_generalized_list())
-            print("here333==========================")
-            print("response :", str(robot_path))
-            return robot_path
+            temp_action_id = temp_gl.get_expression(0).as_generalized_list().get_expression(0).as_value().string_value()
+            temp_robot_id = temp_gl.get_expression(1).as_value().string_value()
+            temp_start = temp_gl.get_expression(2).as_value().int_value()
+            temp_goal = temp_gl.get_expression(3).as_value().int_value()
+            self.robot_goal[temp_robot_id] = temp_goal
+
+            robot_id_replan, robot_id_TM = self.ltm.NC.allocate_goal(self.robot_goal, self.cur_robot_pose)
+            for robot_id in robot_id_TM:
+                self.Control_request(robot_id)
+            
+            if robot_id_replan:
+                response_gl = self.MultiRobotPath_query(robot_id_replan)
+                self.MultiRobotPath_update(response_gl)
+                self.Control_request(robot_id_replan)
+
+            goal_request_result = "(MoveResult (actionID {actionID}) {robotID} {result})".format(temp_action_id, temp_robot_id, "success")
+
+            return goal_request_result
         else:
-            print("what?", str(gl))
+            print("what?", str(temp_gl))
             return "(fail)"
 
-    def handle_multi_robot_path(self, gl):
-        goal = {}
-        goal_robot_id = gl.get_expression(0).as_value().string_value()
-        goal_vertex = gl.get_expression(2).as_value().int_value()
-        goal[goal_robot_id] = goal_vertex
-        self.robot_goal[goal_robot_id] = goal_vertex
-        '''
-        start_id = self.ltm.NC.robotStart[goal_robot_id]
-        goal_id = self.ltm.NC.robotGoal[goal_robot_id]
-        print("here7==========================")
-        print("here8==========================")
-        start_id = self.ltm.NC.robotStart[goal_robot_id]
-        print("here9==========================")
-        goal_id = self.ltm.NC.robotGoal[goal_robot_id]
-        print("here10==========================")
-        '''
+    def SMM_notify(self, robot_id):
+        temp_SMM_gl = "(RobotPathPlan {robot_id} {goal} {path}"
+        path_gl = self.path_gl_generator(self.ltm.NC.robotTM[robot_id])
+        SMM_gl = temp_SMM_gl.format(robot_id, self.robot_goal[robot_id], path_gl)
+        self.notify(self.SMM_name, SMM_gl)
 
-        print("here5==========================")
-        robot_id_replan, robot_id_TM = self.ltm.NC.allocate_goal(goal, self.cur_robot_pose)
-        print("here6==========================")
-        # TODO pause GL 생각하기
-        # self.send(robot_id, (""))
+    def Control_request(self, robot_id):
+        if self.TM_switch[robot_id] == False:
+            temp_MoveTM_gl = "(move (actionID {actionID}) {path}"
 
-        response = self.MultiRobotPath_query(robot_id_replan)
-        print("here11==========================")
-        response_gl = GLFactory.new_gl_from_gl_string(response)
-        self.MultiRobotPath_update(response_gl)
-        return response_gl
+            # if self.robot_path != self.ltm.NC.robotTM[robot_id]:
+            #     self.robot_path = self.ltm.NC.robotTM[robot_id]
+            #     path_gl = self.path_gl_generator(self.robot_path)
+            path_gl = self.path_gl_generator(self.ltm.NC.robotTM[robot_id])
 
-        # self.Control_notify(robot_id_TM, goal)
+            MoveTM_gl = temp_MoveTM_gl.format(self.TM_actionID[robot_id][0], path_gl)
+            print("Request {robot_id} to go {next_vertex}".format(
+                robot_id, path_gl))
+            response = self.request(self.TM_name[robot_id], MoveTM_gl)
+            response_gl = response.get_expression(1).as_value().string_value()
+            print("Request {robot_id} to go {next_vertex} : {result}".format(
+                robot_id, path_gl, response_gl))
 
-    # def request_path(self, gl):
-    #     goal = {}
-    #     goal_robot_id = gl.get_expression(0).as_value().string_value()
-    #     goal_vertex = gl.get_expression(2).as_value().int_value()
-    #     goal[goal_robot_id] = goal_vertex
-    #     self.robot_goal[goal_robot_id] = goal_vertex
-    #     robot_id_replan, robot_id_TM = self.ltm.NC.allocate_goal(goal, self.cur_robot_pose)
-    #
-    #     for robot_id in robot_id_TM:
-    #         # TODO pause GL 생각하기
-    #         #self.send(robot_id, (""))
-    #         pass
-    #
-    #     self.Control_notify(robot_id_TM, goal)
-    #
-    #     if robot_id_replan:
-    #         response = self.MultiRobotPath_query(robot_id_replan)
-    #         response_gl = GLFactory.new_gl_from_gl_string(response)
-    #         self.MultiRobotPath_update(response_gl)
+        elif self.TM_switch[robot_id] == True:
+            # Cancel previous path to revise
+            temp_CancelTM_gl = "(cancelMove (actionID {actionID})"
+            CancelTM_gl = temp_CancelTM_gl.format(self.TM_actionID[robot_id][1])
+            print("Cancel {robot_id} path".format(robot_id))
+            response = self.request(self.TM_name[robot_id], CancelTM_gl)
+            response_gl = response.get_expression(1).as_value().string_value()
+            print("Cancel {robot_id} path : {result}".format(robot_id, response_gl))
 
-    # def Control_notify(self, robot_ids, goal):
-    #     for robot_id in robot_ids:
-    #         RobotNavCont_gl = "(RobotPath \"" + robot_id + "\" "
-    #         RobotPathPlan_gl = "(RobotPathPlan \"" + robot_id + "\" "
-    #         path_gl = "(path"
-    #
-    #         robot_paths = self.ltm.NC.robotTM[robot_id]
-    #
-    #         RobotNavCont_gl += robot_paths[0] + " " + robot_paths[-1] + " "
-    #
-    #         for robot_path in robot_paths:
-    #             path_gl += " "
-    #             path_gl += str(robot_path)
-    #         path_gl += ")"
-    #
-    #         RobotNavCont_gl += path_gl + ")"
-    #
-    #         RobotPathPlan_gl += goal[robot_id] + " " + path_gl + ")"
-    #
-    #         if "LIFT" in robot_id:
-    #             self.send(self.LIFT_TM_name[robot_id], RobotNavCont_gl)
-    #         elif "TOW" in robot_id:
-    #             self.send(self.TOW_TM_name[robot_id], RobotNavCont_gl)
-    #
-    #         self.send(self.SMM_name, RobotPathPlan_gl)
+            # Request new path
+            temp_MoveTM_gl = "(move (actionID {actionID}) {path}"
+            # if self.robot_path != self.ltm.NC.robotTM[robot_id]:
+            #     self.robot_path = self.ltm.NC.robotTM[robot_id]
+            #     path_gl = self.path_gl_generator(self.robot_path)
+            path_gl = self.path_gl_generator(self.ltm.NC.robotTM[robot_id])
+
+            MoveTM_gl = temp_MoveTM_gl.format(self.TM_actionID[robot_id][0], path_gl)
+            print("Request {robot_id} to go {next_vertex}".format(
+                robot_id, path_gl))
+            response = self.request(self.TM_name[robot_id], MoveTM_gl)
+            response_gl = response.get_expression(1).as_value().string_value()
+            print("Request {robot_id} to go {next_vertex} : {result}".format(
+                robot_id, path_gl, response_gl))
+
+    def path_gl_generator(self, path):
+        path_gl = "(path"
+        for path_i in path:
+            path_gl += " "
+            path_gl += str(path_i)
+        path_gl += ")"
+
+        return path_gl
 
     def Goal_check(self):
         while True:
             time.sleep(1)
             for robot_id in self.AMR_IDs:
                 goal_end_index = self.ltm.NC.Flag_terminate[robot_id]
-                if goal_end_index == 0:
-                    self.Goal_Status[robot_id] = True
+
+                if (self.goal_index==0) and (goal_end_index==-1):
+                    self.TM_switch[robot_id] = True
+                    self.goal_index[robot_id] = -1
+                elif (self.goal_index==1) and (goal_end_index==0):
+                    self.TM_switch[robot_id] = False
+                    self.goal_index[robot_id] = 0
+                    goal_result_gl = "(MoveResult (actionID {actionID}) {robotID} {result})".format(self.TM_actionID[robot_id], robot_id, "success")
+                    self.send(self.TM_name[robot_id], goal_result_gl)
                 else:
-                    self.Goal_Status[robot_id] = False
+                    print("No Goal")
 
     def MultiRobotPath_update(self, response_gl):
         multipaths = dict()
