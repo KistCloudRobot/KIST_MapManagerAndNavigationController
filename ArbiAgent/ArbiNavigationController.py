@@ -286,6 +286,14 @@ class NavigationControlerAgent(ArbiAgent):
             goal_id = self.ltm.NC.robotGoal[robot_id]
             request_gl += " (RobotPath \"" + robot_id + "\" " + str(start_id) + " " + str(goal_id) + ")"
 
+            if len(robot_id_replan) == 1:
+                counterpart_check = {0: 1, 1: 0, 2: 3, 3: 2}
+                robot_index = self.AMR_IDs.index(robot_id)
+                c_robot_id = self.AMR_IDs[counterpart_check[robot_index]]
+                c_start_id = self.cur_robot_pose[c_robot_id][0]
+                c_goal_id = self.cur_robot_pose[c_robot_id][1]
+                request_gl += " (RobotPath \"" + c_robot_id + "\" " + str(c_start_id) + " " + str(c_goal_id) + ")"
+
         request_gl += ")"
 
         time.sleep(0.05)
