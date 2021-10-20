@@ -3,7 +3,7 @@ import time
 import os
 import pathlib
 from threading import Condition, Thread
-sys.path.append("D:\CloudRobot\Python-mcArbiFramework")
+# sys.path.append("D:\CloudRobot\Python-mcArbiFramework")
 from arbi_agent.agent.arbi_agent import ArbiAgent
 from arbi_agent.ltm.data_source import DataSource
 from arbi_agent.agent import arbi_agent_excutor
@@ -61,6 +61,12 @@ class NavigationControlerAgent(ArbiAgent):
             "AMR_TOW1": "agent://www.arbi.com/Tow1/TaskManager",
             "AMR_TOW2": "agent://www.arbi.com/Tow2/TaskManager"
         }
+        self.BI_name = {
+            "AMR_LIFT1": "agent://www.arbi.com/Lift1/BehaviorInterface",
+            "AMR_LIFT2": "agent://www.arbi.com/Lift2/BehaviorInterface",
+            "AMR_TOW1": "agent://www.arbi.com/Tow1/BehaviorInterface",
+            "AMR_TOW2": "agent://www.arbi.com/Tow2/BehaviorInterface"
+        }
         self.TM_actionID = {
             "AMR_LIFT1": ["\"1\"", "\"5\""],
             "AMR_LIFT2": ["\"2\"", "\"6\""],
@@ -96,11 +102,11 @@ class NavigationControlerAgent(ArbiAgent):
         Thread(target=self.Goal_check, args=(), daemon=True).start()
 
     def on_notify(self, sender, notification):
-        print("on notify from " + sender + " notification : " + notification)
+        # print("on notify from " + sender + " notification : " + notification)
         temp_gl = GLFactory.new_gl_from_gl_string(notification)
         gl_name = temp_gl.get_name()
         result = (gl_name == "MultiRobotPose")
-        print(result)
+        # print(result)
         if result:
             robot_num = temp_gl.get_expression_size()
             multi_robot_pose = {}
@@ -137,26 +143,33 @@ class NavigationControlerAgent(ArbiAgent):
     def on_request(self, sender, request):
         print("on request : " + request)
         temp_gl = GLFactory.new_gl_from_gl_string(request)
-        print(str(request))
-        result = (temp_gl.get_name() == "Move")
 
-        if result:
+        if temp_gl.get_name() == "Move":
             temp_action_id = temp_gl.get_expression(0).as_generalized_list().get_expression(0).as_value().string_value()
             temp_robot_id = temp_gl.get_expression(1).as_value().string_value()
             temp_start = temp_gl.get_expression(2).as_value().int_value()
             temp_goal = temp_gl.get_expression(3).as_value().int_value()
             self.robot_goal[temp_robot_id] = temp_goal
-
             robot_id_replan, robot_id_TM = self.ltm.NC.allocate_goal(self.robot_goal, self.cur_robot_pose)
             for robot_id in robot_id_TM:
                 self.Control_request(robot_id)
-            
-            if robot_id_replan:
-                response_gl = self.MultiRobotPath_query(robot_id_replan)
-                self.MultiRobotPath_update(response_gl)
-                self.Control_request(robot_id_replan)
 
-            goal_request_result = "(MoveResult (actionID {actionID}) {robotID} {result})".format(temp_action_id, temp_robot_id, "success")
+            if robot_id_replan:
+                response = self.MultiRobotPath_query(robot_id_replan)
+                response_gl = GLFactory.new_gl_from_gl_string(response)
+                print(1111)
+                self.MultiRobotPath_update(response_gl)
+                print(2222)
+                self.Control_request(robot_id_replan)
+                print(3333)
+            print(4444)
+
+            goal_request_result = "(MoveResult (actionID {actionID}) {robotID} {result})".format(
+                actionID=temp_action_id,
+                robotID=temp_robot_id,
+                result="success")
+
+            print(5555)
 
             return goal_request_result
         else:
@@ -166,34 +179,44 @@ class NavigationControlerAgent(ArbiAgent):
     def SMM_notify(self, robot_id):
         temp_SMM_gl = "(RobotPathPlan {robot_id} {goal} {path}"
         path_gl = self.path_gl_generator(self.ltm.NC.robotTM[robot_id])
-        SMM_gl = temp_SMM_gl.format(robot_id, self.robot_goal[robot_id], path_gl)
+        SMM_gl = temp_SMM_gl.format(
+            robot_id=robot_id,
+            goal=self.robot_goal[robot_id],
+            path=path_gl)
         self.notify(self.SMM_name, SMM_gl)
 
     def Control_request(self, robot_id):
-        if self.TM_switch[robot_id] == False:
-            temp_MoveTM_gl = "(move (actionID {actionID}) {path}"
+        if not self.TM_switch[robot_id]:
+            temp_MoveTM_gl = "(move (actionID {actionID}) {path})"
 
             # if self.robot_path != self.ltm.NC.robotTM[robot_id]:
             #     self.robot_path = self.ltm.NC.robotTM[robot_id]
             #     path_gl = self.path_gl_generator(self.robot_path)
             path_gl = self.path_gl_generator(self.ltm.NC.robotTM[robot_id])
 
-            MoveTM_gl = temp_MoveTM_gl.format(self.TM_actionID[robot_id][0], path_gl)
+            MoveTM_gl = temp_MoveTM_gl.format(
+                actionID=self.TM_actionID[robot_id][0],
+                path=path_gl)
             print("Request {robot_id} to go {next_vertex}".format(
-                robot_id, path_gl))
-            response = self.request(self.TM_name[robot_id], MoveTM_gl)
-            response_gl = response.get_expression(1).as_value().string_value()
+                robot_id=robot_id,
+                next_vertex=path_gl))
+            response = self.request(self.BI_name[robot_id], MoveTM_gl)
+            response_gl = GLFactory.new_gl_from_gl_string(response)
+            result = response_gl.get_expression(1).as_value().string_value()
             print("Request {robot_id} to go {next_vertex} : {result}".format(
-                robot_id, path_gl, response_gl))
-
-        elif self.TM_switch[robot_id] == True:
+                robot_id=robot_id,
+                next_vertex=path_gl,
+                result=result))
+        elif self.TM_switch[robot_id]:
             # Cancel previous path to revise
             temp_CancelTM_gl = "(cancelMove (actionID {actionID})"
-            CancelTM_gl = temp_CancelTM_gl.format(self.TM_actionID[robot_id][1])
-            print("Cancel {robot_id} path".format(robot_id))
+            CancelTM_gl = temp_CancelTM_gl.format(actionID=self.TM_actionID[robot_id][1])
+            print("Cancel {robot_id} path".format(robot_id=robot_id))
             response = self.request(self.TM_name[robot_id], CancelTM_gl)
             response_gl = response.get_expression(1).as_value().string_value()
-            print("Cancel {robot_id} path : {result}".format(robot_id, response_gl))
+            print("Cancel {robot_id} path : {result}".format(
+                robot_id=robot_id,
+                result=response_gl))
 
             # Request new path
             temp_MoveTM_gl = "(move (actionID {actionID}) {path}"
@@ -203,12 +226,16 @@ class NavigationControlerAgent(ArbiAgent):
             path_gl = self.path_gl_generator(self.ltm.NC.robotTM[robot_id])
 
             MoveTM_gl = temp_MoveTM_gl.format(self.TM_actionID[robot_id][0], path_gl)
-            print("Request {robot_id} to go {next_vertex}".format(
-                robot_id, path_gl))
+            print("Request {robot_id} cancel to go {next_vertex}".format(
+                robot_id=robot_id,
+                next_vertex=path_gl))
             response = self.request(self.TM_name[robot_id], MoveTM_gl)
-            response_gl = response.get_expression(1).as_value().string_value()
-            print("Request {robot_id} to go {next_vertex} : {result}".format(
-                robot_id, path_gl, response_gl))
+            response_gl = GLFactory.new_gl_from_gl_string(response)
+            result = response_gl.get_expression(1).as_value().string_value()
+            print("Request {robot_id} cancel to go {next_vertex} : {result}".format(
+                robot_id=robot_id,
+                next_vertex=path_gl,
+                result=result))
 
     def path_gl_generator(self, path):
         path_gl = "(path"
@@ -234,7 +261,8 @@ class NavigationControlerAgent(ArbiAgent):
                     goal_result_gl = "(MoveResult (actionID {actionID}) {robotID} {result})".format(self.TM_actionID[robot_id], robot_id, "success")
                     self.send(self.TM_name[robot_id], goal_result_gl)
                 else:
-                    print("No Goal")
+                    # print("No Goal")
+                    pass
 
     def MultiRobotPath_update(self, response_gl):
         multipaths = dict()
@@ -261,7 +289,9 @@ class NavigationControlerAgent(ArbiAgent):
         request_gl += ")"
 
         time.sleep(0.05)
+        print("robot path request :", request_gl)
         response = self.request(agent_MAPF, request_gl)
+        print("robot path response :", response)
 
         return response
 

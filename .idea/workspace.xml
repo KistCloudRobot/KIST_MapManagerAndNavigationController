@@ -8,7 +8,7 @@
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/ArbiAgent/ArbiNavigationController.py" beforeDir="false" afterPath="$PROJECT_DIR$/ArbiAgent/ArbiNavigationController.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/ArbiAgent/ArbiSemanticMapManager.py" beforeDir="false" afterPath="$PROJECT_DIR$/ArbiAgent/ArbiSemanticMapManager.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/MapManagement/MapCloudlet.py" beforeDir="false" afterPath="$PROJECT_DIR$/MapManagement/MapCloudlet.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/NavigationControl/NavigationControl.py" beforeDir="false" afterPath="$PROJECT_DIR$/NavigationControl/NavigationControl.py" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -53,7 +53,7 @@
       <recent name="$PROJECT_DIR$" />
     </key>
   </component>
-  <component name="RunManager" selected="Python.ArbiNavigationController">
+  <component name="RunManager" selected="Python.ArbiSemanticMapManager">
     <configuration name="ArbiNavigationController" type="PythonConfigurationType" factoryName="Python" temporary="true" nameIsGenerated="true">
       <module name="CloudRobot" />
       <option name="INTERPRETER_OPTIONS" value="" />
@@ -255,13 +255,8 @@
         </line-breakpoint>
         <line-breakpoint enabled="true" suspend="THREAD" type="python-line">
           <url>file://$PROJECT_DIR$/NavigationControl/NavigationControl.py</url>
-          <line>255</line>
+          <line>249</line>
           <option name="timeStamp" value="41" />
-        </line-breakpoint>
-        <line-breakpoint enabled="true" suspend="THREAD" type="python-line">
-          <url>file://$PROJECT_DIR$/NavigationControl/NavigationControl.py</url>
-          <line>247</line>
-          <option name="timeStamp" value="44" />
         </line-breakpoint>
         <line-breakpoint enabled="true" suspend="THREAD" type="python-line">
           <url>file://$PROJECT_DIR$/Test/test_NavCont_ver2.py</url>

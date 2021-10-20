@@ -55,7 +55,7 @@ class MapManagerDataSource(DataSource):
                               self.Rack_LIFT_init, self.Door_init)
 
     def on_notify(self, content):
-        print("on notify! " + content)
+        # print("on notify! " + content)
         time.sleep(0.05)
         gl_notify = GLFactory.new_gl_from_gl_string(content)
 
@@ -163,7 +163,7 @@ class MapManagerAgent(ArbiAgent):
         super().close()
 
     def on_notify(self, sender, notification):
-        print("on notify! from", sender, notification)
+        # print("on notify! from", sender, notification)
         time.sleep(0.05)
         temp_gl = GLFactory.new_gl_from_gl_string(notification)
         if temp_gl.get_name() == "RobotPathPlan":  # Notify from Navigation Controller Agent
@@ -333,7 +333,7 @@ class MapManagerAgent(ArbiAgent):
                     time=temp_Collidable_info[i][2]
                 )
             temp_notify = temp_notify + ")"
-
+            print(temp_notify.format(num=temp_Collidable_num))
             self.notify(consumer, temp_notify.format(num=temp_Collidable_num))
 
     def DoorStatus_notify(self, consumer):

@@ -34,7 +34,6 @@ class NavigationControl:
     def allocate_goal(self, goals, robot_pose): # execute when the robot TM allocates a goal to each robot
         # goals: {robot_id: goal vertex, ....}, robot_pose = {id, [vertex, vertex]}
 
-        print("here1-------------------------")
         Rid_robotTM = [] # the list of robot ids that has an updated robotTM
         Rid_replan = [] # the list of robot ids for replanning
         flag_tow = False
@@ -45,14 +44,12 @@ class NavigationControl:
                 flag_tow = True
             if rid in self.AMR_LIFT_IDs:
                 flag_lift = True
-        print("here2-------------------------")
+
         check_ids = []
         if flag_tow: check_ids.extend(self.AMR_TOW_IDs)
         if flag_lift: check_ids.extend(self.AMR_LIFT_IDs)
 
-        print("here3-------------------------")
         for rid in check_ids:
-            print("here4-------------------------")
             '''
             if self.robotGoal[rid] != -1: # the robot has a navigation job => initialize
                 print("here5-------------------------")
@@ -82,7 +79,6 @@ class NavigationControl:
                 
             else: # the robot does not have any job
                 '''
-            print("here6-------------------------")
             if rid in goals.keys(): # get a new job
                 Rid_replan.append(rid)
                 self.robotStart[rid] = robot_pose[rid][0]
@@ -178,7 +174,6 @@ class NavigationControl:
         for rid, vid in robot_pose.items():
             if self.robotGoal[rid] !=-1:
                 if self.robotTM[rid] != []: # check plan execution
-                    print(vid)
                     compare_nodes = [[self.robotTM[rid][0]]*2]
                     if len(self.robotTM[rid])>1:
                         compare_nodes.append(self.robotTM[rid][0:2])
@@ -228,7 +223,6 @@ class NavigationControl:
         #print("PlanExecuted ", self.PlanExecutedIdx)
         #print("Robot TM 2:    ",self.robotTM)
         #print("robotGoal: {}".format(self.robotGoal))
-        print("Flag:{}".format(self.Flag_terminate))
 
         return Rid_sendRobotTM
 
