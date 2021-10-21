@@ -151,7 +151,10 @@ class NavigationControlerAgent(ArbiAgent):
             temp_goal = temp_gl.get_expression(3).as_value().int_value()
             self.robot_goal[temp_robot_id] = temp_goal
             robot_id_replan, robot_id_TM = self.ltm.NC.allocate_goal(self.robot_goal, self.cur_robot_pose)
+            print(robot_id_replan)
+            print(robot_id_TM)
             for robot_id in robot_id_TM:
+                print('hhhh')
                 self.Control_request(robot_id)
 
             if robot_id_replan:
@@ -160,7 +163,9 @@ class NavigationControlerAgent(ArbiAgent):
                 print(1111)
                 self.MultiRobotPath_update(response_gl)
                 print(2222)
-                self.Control_request(robot_id_replan)
+                for robot_id in robot_id_replan:
+                    print('yyyy')
+                    self.Control_request(robot_id)
                 print(3333)
             print(4444)
 
@@ -186,12 +191,13 @@ class NavigationControlerAgent(ArbiAgent):
         self.notify(self.SMM_name, SMM_gl)
 
     def Control_request(self, robot_id):
+        print("begin of function")
         if not self.TM_switch[robot_id]:
             temp_MoveTM_gl = "(move (actionID {actionID}) {path})"
-
             # if self.robot_path != self.ltm.NC.robotTM[robot_id]:
             #     self.robot_path = self.ltm.NC.robotTM[robot_id]
             #     path_gl = self.path_gl_generator(self.robot_path)
+            print(self.ltm.NC.robotTM)
             path_gl = self.path_gl_generator(self.ltm.NC.robotTM[robot_id])
 
             MoveTM_gl = temp_MoveTM_gl.format(
@@ -208,6 +214,7 @@ class NavigationControlerAgent(ArbiAgent):
                 next_vertex=path_gl,
                 result=result))
         elif self.TM_switch[robot_id]:
+            print("what?")
             # Cancel previous path to revise
             temp_CancelTM_gl = "(cancelMove (actionID {actionID})"
             CancelTM_gl = temp_CancelTM_gl.format(actionID=self.TM_actionID[robot_id][1])
@@ -236,6 +243,7 @@ class NavigationControlerAgent(ArbiAgent):
                 robot_id=robot_id,
                 next_vertex=path_gl,
                 result=result))
+        print("end of function")
 
     def path_gl_generator(self, path):
         path_gl = "(path"
