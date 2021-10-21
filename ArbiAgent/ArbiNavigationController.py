@@ -124,6 +124,7 @@ class NavigationControlerAgent(ArbiAgent):
 
             if robot_sendTM:
                 for robot_id in robot_sendTM:
+                    print("Control_request by updating")
                     self.Control_request(robot_id)
                    
         elif gl_name == "Collidable":
@@ -285,6 +286,7 @@ class NavigationControlerAgent(ArbiAgent):
                 path.append(path_gl.get_expression(j).as_value().int_value())
             multipaths[robot_id] = path
         self.ltm.NC.get_multipath_plan(multipaths)
+        self.ltm.NC.update_robot_TM(self.cur_robot_pose)
             
     def MultiRobotPath_query(self, robot_id_replan):
         request_gl = "(MultiRobotPath"
