@@ -64,6 +64,7 @@ class MapManagerDataSource(DataSource):
             temp_RobotInfo.id = gl_notify.get_expression(0).as_value().string_value()
             temp_RobotInfo.pos = [gl_notify.get_expression(1).as_value().float_value(),
                                   gl_notify.get_expression(2).as_value().float_value()]
+            print(temp_RobotInfo.id, temp_RobotInfo.pos)
             load = gl_notify.get_expression(3).as_value().string_value()
             if load == "Unloading":
                 load = 0
@@ -318,7 +319,7 @@ class MapManagerAgent(ArbiAgent):
         while True:
             time.sleep(1)
             ### Timestamp ###
-            temp_Collidable_info = self.ltm.MM.detect_collision(3)
+            temp_Collidable_info = self.ltm.MM.detect_collision(10)
             temp_Collidable_num = len(temp_Collidable_info)
             temp_notify = "(Collidable {num}"
             temp_Collidable_block = " (pair \"{robot_id1}\" \"{robot_id2}\" {time})"

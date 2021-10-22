@@ -9,7 +9,7 @@ class MapCloudlet:
     def __init__(self, mapfile, AMR_LIFT_init, AMR_TOW_init, RACK_TOW_init, RACK_LIFT_init, Door_init, t_init=0):
         # Mapfile: MOS map data file
         # AMR_LITF_IDS, AMR_TOW_IDs: list of robot IDs
-        self.VEL = 0.8  # velocity used to compute collision
+        self.VEL = 0.5  # velocity used to compute collision
         self.Collision_DIST = 1.9
 
         # Load static_map
@@ -66,6 +66,7 @@ class MapCloudlet:
     def update_MOS_robot_info(self, info):  # call this function when robot_information is updated by MOS
         if info.id in self.AMR_LIFT_IDs:
             info.vertex = self.convert_pose_to_vertex(info.pos)
+            print(info.vertex)
             if self.robot_update_rule(self.AMR_LIFT, info):  # if the update rule is satisfied
                 self.AMR_LIFT[info.id]['timestamp'].insert(0, info.timestamp)
                 self.AMR_LIFT[info.id]['pos'].insert(0,info.pos)
@@ -335,7 +336,7 @@ class MapCloudlet:
                 # print("call update Nav Plan", self.AMR_LIFT[amr_id]['vertex'][-1], compare_nodes)
 
     def detect_collision(self, T):  # return [AMR_id1, AMR_id2] if collision occurs in time T
-        delT = 0.1
+        delT = 0.01
         trajs = {}
         amr_ids = []
         collision_set = []
@@ -396,7 +397,7 @@ class MapCloudlet:
             t = t - delT
             traj['x'].append(x)
             traj['y'].append(y)
-
+        print(traj)
         return traj
 
     def convert_pose_to_vertex(self, pose):

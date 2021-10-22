@@ -3,7 +3,7 @@ import time
 import os
 import pathlib
 from threading import Condition, Thread
-# sys.path.append("D:\CloudRobot\Python-mcArbiFramework")
+sys.path.append("D:\CloudRobot\Python-mcArbiFramework")
 from arbi_agent.agent.arbi_agent import ArbiAgent
 from arbi_agent.ltm.data_source import DataSource
 from arbi_agent.agent import arbi_agent_excutor
