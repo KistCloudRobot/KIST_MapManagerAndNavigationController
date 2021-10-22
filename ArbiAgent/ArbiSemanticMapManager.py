@@ -225,7 +225,7 @@ class MapManagerAgent(ArbiAgent):
                     )
                     self.notify(consumer, gl)
                     time.sleep(0.05)
-                    print("cargo pose gl : " + gl)
+                    print("cargo pose notify : " + gl)
                     self.ltm.assert_fact(gl)
                 else:
                     pass
