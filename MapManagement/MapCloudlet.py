@@ -6,11 +6,11 @@ from MapManagement.MapMOS import MapMOS
 
 
 class MapCloudlet:
-    def __init__(self, mapfile, AMR_LIFT_init, AMR_TOW_init, RACK_TOW_init, RACK_LIFT_init, Door_init, t_init=0):
+    def __init__(self, mapfile, AMR_LIFT_init, AMR_TOW_init, RACK_TOW_init, RACK_LIFT_init, CARGO_init, Door_init, t_init=0):
         # Mapfile: MOS map data file
         # AMR_LITF_IDS, AMR_TOW_IDs: list of robot IDs
         self.VEL = 0.5  # velocity used to compute collision
-        self.Collision_DIST = 1.9
+        self.Collision_DIST = 2.0
 
         # Load static_map
         self.static_map = MapMOS(mapfile)
@@ -19,7 +19,7 @@ class MapCloudlet:
         # initialize - number
         self.AMR_LIFT_IDs = AMR_LIFT_init.keys()
         self.AMR_TOW_IDs = AMR_TOW_init.keys()
-        self.CARGO_IDs = []  # Add ID, if new cargo appears
+        self.CARGO_IDs = CARGO_init.keys()  # Add ID, if new cargo appears
         self.CARGO_ID_NUM = 0
         self.RACK_TOW_IDs = RACK_TOW_init.keys()  # Add ID, if new rack_tow appears
         self.RACK_LIFT_IDs = RACK_LIFT_init.keys()  # Add ID, if new rack_lift appears
@@ -30,7 +30,6 @@ class MapCloudlet:
         # save all object's position : dictionary {ID: {'timestamp':[], 'pos':[], 'vertex':[(vertex,vertex),(vertex,vertex)], 'load_id':[], 'load':0}
         # load_id: 같이 있는 물체들을 list로 ex) AMR_LIFT['load_id']=[[rack, cargo], [], ...], RACK['load_id']=[[robot, cargo], CARGO['load_id']=[[robot, rack'], ..
         # load: 로드가 되면 1
-        self.CARGO = {}  # save cargo pose
 
         # initialize robots and plan
         self.AMR_LIFT, self.Path_AMR_LIFT = {}, {}
@@ -58,6 +57,13 @@ class MapCloudlet:
             self.RACK_TOW[id] = {'timestamp': [t_init], 'pos': [pos], 'vertex': [[vertex, vertex]],
                                  'load_id': [[-1, -1]]}
 
+        # initialize CARGO
+        self.CARGO = {}  # save cargo pose
+        for id, vertex in CARGO_init.items():
+            pos = [self.static_map.VertexPos[vertex][0], self.static_map.VertexPos[vertex][2]]
+            self.CARGO[id] = {'timestamp': [t_init], 'pos': [pos], 'vertex': [[vertex, vertex]],
+                              'load_id': [[-1, -1]]}
+
         # initialize the door
         self.Door = {}
         for id, val in Door_init.items():
@@ -66,7 +72,7 @@ class MapCloudlet:
     def update_MOS_robot_info(self, info):  # call this function when robot_information is updated by MOS
         if info.id in self.AMR_LIFT_IDs:
             info.vertex = self.convert_pose_to_vertex(info.pos)
-            print(info.vertex)
+            print("Print update vertex", info.id, info.vertex)
             if self.robot_update_rule(self.AMR_LIFT, info):  # if the update rule is satisfied
                 self.AMR_LIFT[info.id]['timestamp'].insert(0, info.timestamp)
                 self.AMR_LIFT[info.id]['pos'].insert(0,info.pos)
@@ -75,13 +81,13 @@ class MapCloudlet:
 
                 # update loaded/unloaded objects
                 if info.load == 1:
-                    if self.AMR_LIFT[info.id]['load'][-2] == 1:  # a robot is carrying a rack
+                    if self.AMR_LIFT[info.id]['load'][1] == 1:  # a robot is carrying a rack
                         # copy previous state
-                        load_id = self.AMR_LIFT[info.id]['load_id'][-1]
+                        load_id = self.AMR_LIFT[info.id]['load_id'][0]
                     else:  # a robot loads a rack, now.
                         load_id = [self.search_obj_at_vertex(self.RACK_LIFT, info.vertex),
                                    self.search_obj_at_vertex(self.CARGO, info.vertex)]
-
+                    print(load_id)
                     # update the lift
                     self.AMR_LIFT[info.id]['load_id'].insert(0,load_id)
 
@@ -91,6 +97,7 @@ class MapCloudlet:
                         self.RACK_LIFT[id]['timestamp'].insert(0,info.timestamp)
                         self.RACK_LIFT[id]['pos'].insert(0, info.pos)
                         self.RACK_LIFT[id]['vertex'].insert(0,info.vertex)
+                        print(self.RACK_LIFT[id]['vertex'].insert(0,info.vertex))
                         self.RACK_LIFT[id]['load_id'].insert(0,[info.id, load_id[1]])
 
                     # update the state of cargos that a robot is carrying
@@ -343,10 +350,12 @@ class MapCloudlet:
         for rid in self.AMR_TOW_IDs:
             trajs[rid] = self.generate_traj_from_plan(self.AMR_TOW[rid]['pos'][-1], self.VEL, delT, T,
                                                       self.Path_AMR_TOW[rid])
+            # print("trajectory of ", rid, trajs[rid])
             amr_ids.append(rid)
         for rid in self.AMR_LIFT_IDs:
             trajs[rid] = self.generate_traj_from_plan(self.AMR_LIFT[rid]['pos'][-1], self.VEL, delT, T,
                                                       self.Path_AMR_LIFT[rid])
+            # print("trajectory of ", rid, trajs[rid])
             amr_ids.append(rid)
 
         for ii in range(0, len(amr_ids)):
@@ -397,7 +406,7 @@ class MapCloudlet:
             t = t - delT
             traj['x'].append(x)
             traj['y'].append(y)
-        print(traj)
+        # print(traj)
         return traj
 
     def convert_pose_to_vertex(self, pose):
@@ -428,7 +437,8 @@ class MapCloudlet:
     def search_obj_at_vertex(self, objlist, v):  # objlist: AMR_LIFT, AMR_TOW, ...
         objs = []
         for id, info in objlist.items():
-            if info['vertex'][-1] == v:
+            # if info['vertex'][-1] == v:
+            if info['vertex'][0] == v:
                 objs.append(id)
         if len(objs) == 1:
             return objs[0]

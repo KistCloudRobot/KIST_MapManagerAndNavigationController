@@ -16,7 +16,7 @@ from MapManagement.MapCloudlet import MapCloudlet
 from DataType.RobotInfo import RobotInfo
 from DataType.CallInfo import CallInfo
 
-broker_url = "tcp://127.0.0.1:61316"
+broker_url = "tcp://172.16.165.204:61316"
 # broker_url = 'tcp://' + os.environ["JMS_BROKER"]
 
 
@@ -50,12 +50,14 @@ class MapManagerDataSource(DataSource):
                                'RACK_LIFT3': 15, 'RACK_LIFT4': 18, 'RACK_LIFT5': 19}
         self.Rack_TOW_init = {'RACK_TOW0': 21, 'RACK_TOW1': 20}
 
+        self.Cargo_init = {"CARGO0":  5, "CARGO1": 18}
+
         self.Door_init = {'Door0': 0}
         self.MM = MapCloudlet(self.map_file, self.AMR_LIFT_init, self.AMR_TOW_init, self.Rack_TOW_init,
-                              self.Rack_LIFT_init, self.Door_init)
+                              self.Rack_LIFT_init, self.Cargo_init, self.Door_init)
 
     def on_notify(self, content):
-        # print("on notify! " + content)
+        print("on notify! " + content)
         time.sleep(0.05)
         gl_notify = GLFactory.new_gl_from_gl_string(content)
 
@@ -64,7 +66,7 @@ class MapManagerDataSource(DataSource):
             temp_RobotInfo.id = gl_notify.get_expression(0).as_value().string_value()
             temp_RobotInfo.pos = [gl_notify.get_expression(1).as_value().float_value(),
                                   gl_notify.get_expression(2).as_value().float_value()]
-            print(temp_RobotInfo.id, temp_RobotInfo.pos)
+            # print(temp_RobotInfo.id, temp_RobotInfo.pos)
             load = gl_notify.get_expression(3).as_value().string_value()
             if load == "Unloading":
                 load = 0
@@ -164,10 +166,24 @@ class MapManagerAgent(ArbiAgent):
         super().close()
 
     def on_notify(self, sender, notification):
-        # print("on notify! from", sender, notification)
+        print("on notify! ", notification)
         time.sleep(0.05)
         temp_gl = GLFactory.new_gl_from_gl_string(notification)
         if temp_gl.get_name() == "RobotPathPlan":  # Notify from Navigation Controller Agent
+            # robot_num = temp_gl.get_expression_size()
+            # for i in range(robot_num):
+            #     info_gl = temp_gl.get_expression(i).as_generalized_list()
+            #     robot_id = info_gl.get_expression(0).as_value().string_value()
+            #     robot_goal = info_gl.get_expression(1).as_value().int_value()
+            #     path_gl = info_gl.get_expression(2).as_generalized_list()
+            #     path_size = path_gl.get_expression_size()
+            #     robot_path = []
+            #     for j in range(path_size):
+            #         robot_path.append(path_gl.get_expression(j).as_value().int_value())
+            #
+            #     self.robot_goal[robot_id] = robot_goal
+            #     self.ltm.MM.insert_NAV_PLAN(robot_id, robot_path)
+            # print("Path Notification from NC")
             temp_path = []
             temp_gl_amr_id = temp_gl.get_expression(0).as_value().string_value()
             temp_gl_goal = temp_gl.get_expression(1).as_value().string_value()
@@ -180,6 +196,8 @@ class MapManagerAgent(ArbiAgent):
                 temp_path.append(temp_gl_path.get_expression(i).as_value().int_value())
 
             self.ltm.MM.insert_NAV_PLAN(temp_gl_amr_id, temp_path)
+            time.sleep(0.05)
+            self.ltm.MM.update_NAV_PLAN(temp_gl_amr_id)
 
     def CargoPose_notify(self, consumer):
         while True:
@@ -191,22 +209,23 @@ class MapManagerAgent(ArbiAgent):
                     ### Cargo_id != -1 ###
                     temp_Cargo_id = id
                     temp_Cargo_vertex = temp_Cargo_info[id]['vertex']
-                    temp_Cargo_robot_id = temp_Cargo_info[id]['load_id'][0]
-                    temp_Cargo_rack_id = temp_Cargo_info[id]['load_id'][1]
+                    temp_Cargo_robot_id = temp_Cargo_info[id]['load_id'][0][0]
+                    temp_Cargo_rack_id = temp_Cargo_info[id]['load_id'][0][1]
                     temp_Cargo_status = []
 
                     # TODO LIFT STATUS 처리
                     gl_template = "(CargoPose \"{cargo_id}\" (vertex_id {v_id1} {v_id2}) (on \"{robot_id}\" \"{rack_id}\") \"{status}\")"
                     gl = gl_template.format(
                         cargo_id=temp_Cargo_id,
-                        v_id1=temp_Cargo_vertex[0],
-                        v_id2=temp_Cargo_vertex[1],
+                        v_id1=temp_Cargo_vertex[0][0],
+                        v_id2=temp_Cargo_vertex[0][1],
                         robot_id=temp_Cargo_robot_id,
                         rack_id=temp_Cargo_rack_id,
                         status=temp_Cargo_status
                     )
                     self.notify(consumer, gl)
                     time.sleep(0.05)
+                    print("cargo pose gl : " + gl)
                     self.ltm.assert_fact(gl)
                 else:
                     pass
@@ -236,6 +255,7 @@ class MapManagerAgent(ArbiAgent):
                         cargo_id=temp_RackPose_LIFT_cargo_id,
                         status=temp_RackPose_LIFT_status
                     )
+                    print("rack pose notify : " + gl)
                     self.notify(consumer, gl)
                 else:
                     pass
@@ -317,25 +337,26 @@ class MapManagerAgent(ArbiAgent):
 
     def Collidable_notify(self, consumer):
         while True:
-            time.sleep(1)
+            time.sleep(3.5)
             ### Timestamp ###
             temp_Collidable_info = self.ltm.MM.detect_collision(10)
             temp_Collidable_num = len(temp_Collidable_info)
-            temp_notify = "(Collidable {num}"
-            temp_Collidable_block = " (pair \"{robot_id1}\" \"{robot_id2}\" {time})"
+            if temp_Collidable_num:
+                temp_notify = "(Collidable {num}"
+                temp_Collidable_block = " (pair \"{robot_id1}\" \"{robot_id2}\" {time})"
 
-            for i in range(temp_Collidable_num):
-                temp_robot_id_1 = self.ltm.AMR_IDs.index(temp_Collidable_info[i][0])
-                temp_robot_id_2 = self.ltm.AMR_IDs.index(temp_Collidable_info[i][1])
+                for i in range(temp_Collidable_num):
+                    temp_robot_id_1 = temp_Collidable_info[i][0]
+                    temp_robot_id_2 = temp_Collidable_info[i][1]
 
-                temp_notify = temp_notify + temp_Collidable_block.format(
-                    robot_id1=temp_robot_id_1,
-                    robot_id2=temp_robot_id_2,
-                    time=temp_Collidable_info[i][2]
-                )
-            temp_notify = temp_notify + ")"
-            print(temp_notify.format(num=temp_Collidable_num))
-            self.notify(consumer, temp_notify.format(num=temp_Collidable_num))
+                    temp_notify = temp_notify + temp_Collidable_block.format(
+                        robot_id1=temp_robot_id_1,
+                        robot_id2=temp_robot_id_2,
+                        time=temp_Collidable_info[i][2]
+                    )
+                temp_notify = temp_notify + ")"
+                # print(temp_notify.format(num=temp_Collidable_num))
+                self.notify(consumer, temp_notify.format(num=temp_Collidable_num))
 
     def DoorStatus_notify(self, consumer):
         while True:
