@@ -133,7 +133,6 @@ class NavigationControlerAgent(ArbiAgent):
 
             if robot_sendTM:
                 for robot_id in robot_sendTM:
-                    print("Control_request by updating")
                     self.Control_request(robot_id)
                    
         elif gl_name == "Collidable":
@@ -141,16 +140,13 @@ class NavigationControlerAgent(ArbiAgent):
             for i in range(collide_num):
                 temp_collide_gl = temp_gl.get_expression(i+1).as_generalized_list()
                 robot_ids = [temp_collide_gl.get_expression(0).as_value().string_value(), temp_collide_gl.get_expression(1).as_value().string_value()]
-                print("THIS iS Collidable robot ids ", robot_ids)
                 self.ltm.NC.update_start_goal_collision(robot_ids)
-                print('aaaaa')
                 # for robot_id in robot_ids:
                 #     self.Control_request(robot_id)
                 
                 response = self.MultiRobotPath_query(robot_ids)
                 response_gl = GLFactory.new_gl_from_gl_string(response)
                 self.MultiRobotPath_update(response_gl)
-                print('bbbb')
                 for robot_id in robot_ids:
                     self.Control_request(robot_id)
 
@@ -165,30 +161,19 @@ class NavigationControlerAgent(ArbiAgent):
             temp_goal = temp_gl.get_expression(3).as_value().int_value()
             self.robot_goal[temp_robot_id] = temp_goal
             robot_id_replan, robot_id_TM = self.ltm.NC.allocate_goal(self.robot_goal, self.cur_robot_pose)
-            print(robot_id_replan)
-            print(robot_id_TM)
             for robot_id in robot_id_TM:
-                print('hhhh')
                 self.Control_request(robot_id)
 
             if robot_id_replan:
                 response = self.MultiRobotPath_query(robot_id_replan)
                 response_gl = GLFactory.new_gl_from_gl_string(response)
-                print(1111)
                 self.MultiRobotPath_update(response_gl)
-                print(2222)
                 for robot_id in robot_id_replan:
-                    print('yyyy')
                     self.Control_request(robot_id)
-                print(3333)
-            print(4444)
-
             goal_request_result = "(MoveResult (actionID \"{actionID}\") \"{robotID}\" \"{result}\")".format(
                 actionID=temp_action_id,
                 robotID=temp_robot_id,
                 result="success")
-
-            print(5555)
 
             return goal_request_result
         else:
@@ -205,7 +190,6 @@ class NavigationControlerAgent(ArbiAgent):
         self.notify(self.SMM_name, SMM_gl)
 
     def Control_request(self, robot_id):
-        print("begin of function")
         if self.ltm.NC.robotTM[robot_id]:
             # if self.goal_index[robot_id] == 0:
             if self.move_check[robot_id] == 0:
@@ -213,7 +197,6 @@ class NavigationControlerAgent(ArbiAgent):
                 # if self.robot_path != self.ltm.NC.robotTM[robot_id]:
                 #     self.robot_path = self.ltm.NC.robotTM[robot_id]
                 #     path_gl = self.path_gl_generator(self.robot_path)
-                print(self.ltm.NC.robotTM)
                 path_gl = self.path_gl_generator(self.ltm.NC.robotTM[robot_id])
 
                 MoveTM_gl = temp_MoveTM_gl.format(
@@ -238,17 +221,13 @@ class NavigationControlerAgent(ArbiAgent):
                 self.move_check[robot_id] = 0
             # elif self.goal_index[robot_id] == 1:
             elif self.move_check[robot_id] == 1:
-                print("what?")
                 # Cancel previous path to revise
                 temp_CancelTM_gl = "(cancelMove (actionID {actionID}))"
                 CancelTM_gl = temp_CancelTM_gl.format(actionID=self.TM_actionID[robot_id][1])
                 print("Cancel {robot_id} path".format(robot_id=robot_id))
-                print(CancelTM_gl)
                 self.move_check[robot_id] = 0
                 response = self.request(self.BI_name[robot_id], CancelTM_gl)
-                print(response)
                 response_gl = response.get_expression(1).as_value().string_value()
-                print("here")
                 print("Cancel {robot_id} path : {result}".format(
                     robot_id=robot_id,
                     result=str(response_gl)))
@@ -280,7 +259,6 @@ class NavigationControlerAgent(ArbiAgent):
         else:
             print(robot_id, " no path")
             self.SMM_notify(robot_id)
-        print("end of function")
 
     def path_gl_generator(self, path):
         path_gl = "(path"

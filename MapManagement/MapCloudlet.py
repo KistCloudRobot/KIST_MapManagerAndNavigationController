@@ -81,7 +81,6 @@ class MapCloudlet:
     def update_MOS_robot_info(self, info):  # call this function when robot_information is updated by MOS
         if info.id in self.AMR_LIFT_IDs:
             info.vertex = self.convert_pose_to_vertex(info.pos)
-            print("Print update vertex", info.id, info.vertex)
             if self.robot_update_rule(self.AMR_LIFT, info):  # if the update rule is satisfied
                 self.AMR_LIFT[info.id]['timestamp'].insert(0, info.timestamp)
                 self.AMR_LIFT[info.id]['pos'].insert(0,info.pos)
@@ -96,7 +95,6 @@ class MapCloudlet:
                     else:  # a robot loads a rack, now.
                         load_id = [self.search_obj_at_vertex(self.RACK_LIFT, info.vertex),
                                    self.search_obj_at_vertex(self.CARGO, info.vertex)]
-                    print(load_id)
                     # update the lift
                     self.AMR_LIFT[info.id]['load_id'].insert(0,load_id)
 
@@ -106,7 +104,6 @@ class MapCloudlet:
                         self.RACK_LIFT[id]['timestamp'].insert(0,info.timestamp)
                         self.RACK_LIFT[id]['pos'].insert(0, info.pos)
                         self.RACK_LIFT[id]['vertex'].insert(0,info.vertex)
-                        print(self.RACK_LIFT[id]['vertex'].insert(0,info.vertex))
                         self.RACK_LIFT[id]['load_id'].insert(0,[info.id, load_id[1]])
 
                     # update the state of cargos that a robot is carrying
@@ -117,12 +114,12 @@ class MapCloudlet:
                         self.CARGO[id]['vertex'].insert(0,info.vertex)
                         self.CARGO[id]['load_id'].insert(0,[info.id, load_id[0]])
 
-                elif info.load == 0 and self.AMR_LIFT[info.id]['load'][-2] == 1:  # unload the rack now
+                elif info.load == 0 and self.AMR_LIFT[info.id]['load'][1] == 1:  # unload the rack now
                     self.AMR_LIFT[info.id]['load_id'].insert(0,[-1, -1])
 
                     # rack id and cargo id before unloading
-                    rack_id = self.AMR_LIFT[info.id]['load_id'][-2][0]
-                    cargo_id = self.AMR_LIFT[info.id]['load_id'][-2][1]
+                    rack_id = self.AMR_LIFT[info.id]['load_id'][1][0]
+                    cargo_id = self.AMR_LIFT[info.id]['load_id'][1][1]
                     # update the rack_lift
                     self.RACK_LIFT[rack_id]['timestamp'].insert(0,info.timestamp)
                     self.RACK_LIFT[rack_id]['pos'].insert(0,info.pos)
@@ -150,9 +147,9 @@ class MapCloudlet:
 
                 # update loaded/unloaded objects
                 if info.load == 1:
-                    if self.AMR_TOW[info.id]['load'][-2] == 1:  # a robot is carrying a rack
+                    if self.AMR_TOW[info.id]['load'][1] == 1:  # a robot is carrying a rack
                         # copy previous state
-                        load_id = self.AMR_TOW[info.id]['load_id'][-1]
+                        load_id = self.AMR_TOW[info.id]['load_id'][0]
                     else:  # a robot loads a rack, now.
                         load_id = [self.search_obj_at_vertex(self.RACK_TOW, info.vertex),
                                    self.search_obj_at_vertex(self.CARGO, info.vertex)]
@@ -176,12 +173,12 @@ class MapCloudlet:
                         self.CARGO[id]['vertex'].insert(0,info.vertex)
                         self.CARGO[id]['load_id'].insert(0,[info.id, load_id[0]])
 
-                elif info.load == 0 and self.AMR_TOW[info.id]['load'][-2] == 1:  # unload the rack now
+                elif info.load == 0 and self.AMR_TOW[info.id]['load'][1] == 1:  # unload the rack now
                     self.AMR_TOW[info.id]['load_id'].insert(0,[-1, -1])
 
                     # rack id and cargo id before unloading
-                    rack_id = self.AMR_TOW[info.id]['load_id'][-2][0]
-                    cargo_id = self.AMR_TOW[info.id]['load_id'][-2][1]
+                    rack_id = self.AMR_TOW[info.id]['load_id'][1][0]
+                    cargo_id = self.AMR_TOW[info.id]['load_id'][1][1]
                     # update the rack_tow
                     self.RACK_TOW[rack_id]['timestamp'].insert(0,info.timestamp)
                     self.RACK_TOW[rack_id]['pos'].insert(0,info.pos)
