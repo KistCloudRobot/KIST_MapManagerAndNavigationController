@@ -6,7 +6,7 @@ from threading import Condition, Thread
 sys.path.append("D:\CloudRobot\Python-mcArbiFramework")
 from arbi_agent.agent.arbi_agent import ArbiAgent
 from arbi_agent.ltm.data_source import DataSource
-from arbi_agent.agent import arbi_agent_excutor
+from arbi_agent.agent import arbi_agent_executor
 from arbi_agent.model import generalized_list_factory as GLFactory
 
 sys.path.append(str(pathlib.Path(__file__).parent.parent.resolve()))
@@ -16,7 +16,7 @@ from MapManagement.MapCloudlet import MapCloudlet
 from DataType.RobotInfo import RobotInfo
 from DataType.CallInfo import CallInfo
 
-broker_url = "tcp://172.16.165.204:61316"
+broker_url = "tcp://172.16.165.204:61313"
 # broker_url = 'tcp://' + os.environ["JMS_BROKER"]
 
 
@@ -47,10 +47,10 @@ class MapManagerDataSource(DataSource):
         self.AMR_TOW_init = {"AMR_TOW1": 203, "AMR_TOW2": 204}
 
         self.Rack_LIFT_init = {'RACK_LIFT0': 5, 'RACK_LIFT1': 13, 'RACK_LIFT2': 14,
-                               'RACK_LIFT3': 15, 'RACK_LIFT4': 18, 'RACK_LIFT5': 19}
+                               'RACK_LIFT3': 15, 'RACK_LIFT4': 2, 'RACK_LIFT5': 19}
         self.Rack_TOW_init = {'RACK_TOW0': 21, 'RACK_TOW1': 20}
 
-        self.Cargo_init = {"CARGO0":  5, "CARGO1": 18}
+        self.Cargo_init = {"CARGO0":  5, "CARGO1": 19}
 
         self.Door_init = {'Door0': 0}
         self.MM = MapCloudlet(self.map_file, self.AMR_LIFT_init, self.AMR_TOW_init, self.Rack_TOW_init,
@@ -394,12 +394,12 @@ class MapManagerAgent(ArbiAgent):
 
     #         self.notify(consumer, temp_notify.format(temp_robot_id, temp_path))
 
-
     def on_query(self, sender, query):
         print("on query : " + query)
         time.sleep(0.05)
         gl_query = GLFactory.new_gl_from_gl_string(query)
         query_name = gl_query.get_name()
+        response = "(fail)"
 
         if query_name == "Collidable":  # From Local CM
             ### Timestamp ###
@@ -419,7 +419,7 @@ class MapManagerAgent(ArbiAgent):
 
             temp_response = temp_response + ")"
             # self.send(sender, temp_response.format(temp_Collidable_num))
-            return temp_response.format(temp_Collidable_num)
+            response = temp_response.format(temp_Collidable_num)
 
         elif query_name == "RobotSpecInfo":  # From Local TA
             temp_robot_num = gl_query.get_expression_size()
@@ -440,6 +440,7 @@ class MapManagerAgent(ArbiAgent):
                     temp_response += " (RobotInfo \"" + str(temp_robot_id) + "\"" + \
                                      " (vertex_id " + str(temp_TOW_vertex[0]) + " " + str(temp_TOW_vertex[1]) + ")" + \
                                      " " + str(temp_TOW_load) + " \"" + str(temp_TOW_goal) + "\")"
+
                 elif "LIFT" in temp_robot_id:
                     temp_LIFT_info = self.ltm.MM.AMR_LIFT[temp_robot_id]
                     temp_LIFT_vertex = temp_LIFT_info['vertex'][0]
@@ -455,15 +456,14 @@ class MapManagerAgent(ArbiAgent):
                                      " (vertex_id " + str(temp_LIFT_vertex[0]) + " " + str(temp_LIFT_vertex[1]) + ")" + \
                                      " " + str(temp_LIFT_load) + " \"" + str(temp_LIFT_goal) + "\")"
             temp_response += ")"
-            return temp_response
+            response = temp_response
 
-        else:
-            return "(fail)"
+        return response
 
 
 if __name__ == "__main__":
     agent = MapManagerAgent()
-    arbi_agent_excutor.execute(broker_url=broker_url, agent_name="agent://www.arbi.com/Local/MapManager",
+    arbi_agent_executor.execute(broker_url=broker_url, agent_name="agent://www.arbi.com/Local/MapManager",
                                agent=agent, broker_type=2)  # same role with agent.initialize
 
     while True:

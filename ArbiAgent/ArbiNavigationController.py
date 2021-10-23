@@ -6,7 +6,7 @@ from threading import Condition, Thread
 sys.path.append("D:\CloudRobot\Python-mcArbiFramework")
 from arbi_agent.agent.arbi_agent import ArbiAgent
 from arbi_agent.ltm.data_source import DataSource
-from arbi_agent.agent import arbi_agent_excutor
+from arbi_agent.agent import arbi_agent_executor
 from arbi_agent.model import generalized_list_factory as GLFactory
 
 sys.path.append(str(pathlib.Path(__file__).parent.parent.resolve()))
@@ -15,7 +15,7 @@ from MapManagement.MapMOS import MapMOS
 from NavigationControl.NavigationControl import NavigationControl
 
 agent_MAPF = "agent://www.arbi.com/Local/MultiAgentPathFinder"
-broker_url = "tcp://172.16.165.204:61316"
+broker_url = "tcp://172.16.165.204:61313"
 # broker_url = 'tcp://' + os.environ["JMS_BROKER"]
 
 
@@ -183,7 +183,7 @@ class NavigationControlerAgent(ArbiAgent):
                 print(3333)
             print(4444)
 
-            goal_request_result = "(MoveResult (actionID {actionID}) {robotID} {result})".format(
+            goal_request_result = "(MoveResult (actionID \"{actionID}\") \"{robotID}\" \"{result}\")".format(
                 actionID=temp_action_id,
                 robotID=temp_robot_id,
                 result="success")
@@ -235,6 +235,7 @@ class NavigationControlerAgent(ArbiAgent):
                     robot_id=robot_id,
                     next_vertex=path_gl,
                     result=result))
+                self.move_check[robot_id] = 0
             # elif self.goal_index[robot_id] == 1:
             elif self.move_check[robot_id] == 1:
                 print("what?")
@@ -368,7 +369,7 @@ class NavigationControlerAgent(ArbiAgent):
 
 if __name__ == "__main__":
     agent = NavigationControlerAgent()
-    arbi_agent_excutor.execute(broker_url=broker_url,
+    arbi_agent_executor.execute(broker_url=broker_url,
                                agent_name="agent://www.arbi.com/Local/NavigationController",
                                agent=agent, broker_type=2)  # same role with agent.initialize
     while True:

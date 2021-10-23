@@ -4,7 +4,7 @@
     <option name="autoReloadType" value="SELECTIVE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="04149278-7bc7-47aa-8e5e-6913cd76eeb1" name="Default Changelist" comment="...">
+    <list default="true" id="04149278-7bc7-47aa-8e5e-6913cd76eeb1" name="Default Changelist" comment="bug fix">
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/ArbiAgent/ArbiNavigationController.py" beforeDir="false" afterPath="$PROJECT_DIR$/ArbiAgent/ArbiNavigationController.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/ArbiAgent/ArbiSemanticMapManager.py" beforeDir="false" afterPath="$PROJECT_DIR$/ArbiAgent/ArbiSemanticMapManager.py" afterDir="false" />
@@ -42,7 +42,7 @@
   <component name="PropertiesComponent">
     <property name="RunOnceActivity.OpenProjectViewOnStart" value="true" />
     <property name="RunOnceActivity.ShowReadmeOnStart" value="true" />
-    <property name="last_opened_file_path" value="$PROJECT_DIR$/../CLOUD_MAPF" />
+    <property name="last_opened_file_path" value="$PROJECT_DIR$" />
     <property name="settings.editor.selected.configurable" value="com.jetbrains.python.configuration.PyActiveSdkModuleConfigurable" />
   </component>
   <component name="RecentsManager">
@@ -53,7 +53,7 @@
       <recent name="$PROJECT_DIR$" />
     </key>
   </component>
-  <component name="RunManager" selected="Python.ArbiNavigationController">
+  <component name="RunManager" selected="Python.ArbiSemanticMapManager">
     <configuration name="ArbiNavigationController" type="PythonConfigurationType" factoryName="Python" temporary="true" nameIsGenerated="true">
       <module name="CloudRobot" />
       <option name="INTERPRETER_OPTIONS" value="" />
@@ -224,7 +224,14 @@
       <option name="project" value="LOCAL" />
       <updated>1630328865169</updated>
     </task>
-    <option name="localTasksCounter" value="6" />
+    <task id="LOCAL-00006" summary="bug fix">
+      <created>1634903588587</created>
+      <option name="number" value="00006" />
+      <option name="presentableId" value="LOCAL-00006" />
+      <option name="project" value="LOCAL" />
+      <updated>1634903588587</updated>
+    </task>
+    <option name="localTasksCounter" value="7" />
     <servers />
   </component>
   <component name="Vcs.Log.Tabs.Properties">
@@ -243,7 +250,8 @@
     <MESSAGE value="Add functions in MapCloudlet.py&#10;Add datatype, robot.info" />
     <MESSAGE value="Add collision_check in MapCloudlet.py" />
     <MESSAGE value="hi" />
-    <option name="LAST_COMMIT_MESSAGE" value="hi" />
+    <MESSAGE value="bug fix" />
+    <option name="LAST_COMMIT_MESSAGE" value="bug fix" />
   </component>
   <component name="XDebuggerManager">
     <breakpoint-manager>
