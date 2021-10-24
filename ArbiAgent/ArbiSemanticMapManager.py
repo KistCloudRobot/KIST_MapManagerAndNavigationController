@@ -57,7 +57,7 @@ class MapManagerDataSource(DataSource):
                               self.Rack_LIFT_init, self.Cargo_init, self.Door_init)
 
     def on_notify(self, content):
-        print("on notify! " + content)
+        # print("on notify! " + content)
         time.sleep(0.05)
         gl_notify = GLFactory.new_gl_from_gl_string(content)
 
@@ -225,7 +225,7 @@ class MapManagerAgent(ArbiAgent):
                     )
                     self.notify(consumer, gl)
                     time.sleep(0.05)
-                    print("cargo pose notify : " + gl)
+                    # print("cargo pose notify : " + gl)
                     self.ltm.assert_fact(gl)
                 else:
                     pass
@@ -255,7 +255,7 @@ class MapManagerAgent(ArbiAgent):
                         cargo_id=temp_RackPose_LIFT_cargo_id,
                         status=temp_RackPose_LIFT_status
                     )
-                    print("rack pose notify : " + gl)
+                    # print("rack pose notify : " + gl)
                     self.notify(consumer, gl)
                 else:
                     pass

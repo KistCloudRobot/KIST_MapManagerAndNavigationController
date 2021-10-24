@@ -111,7 +111,7 @@ class NavigationControlerAgent(ArbiAgent):
         print(data)
 
     def on_notify(self, sender, notification):
-        print("on notify! " + notification)
+        # print("on notify! " + notification)
         temp_gl = GLFactory.new_gl_from_gl_string(notification)
         gl_name = temp_gl.get_name()
         result = (gl_name == "MultiRobotPose")
