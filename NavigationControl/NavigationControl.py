@@ -46,9 +46,9 @@ class NavigationControl:
                 flag_lift = True
 
         check_ids = []
+        
         if flag_tow: check_ids.extend(self.AMR_TOW_IDs)
         if flag_lift: check_ids.extend(self.AMR_LIFT_IDs)
-
         for rid in check_ids:
             '''
             if self.robotGoal[rid] != -1: # the robot has a navigation job => initialize
@@ -195,7 +195,6 @@ class NavigationControl:
         # robot_pose ={robot_id: [vertex, vertex], ...}
         Rid_sendRobotTM = [] # list of robot ids, of which robot TM a navigation controller should send
         #print("Robot TM 2:    ", self.robotTM)
-
         # check whether the current TM command is executed
         for rid, vid in robot_pose.items():
             if self.robotGoal[rid] !=-1:
@@ -220,7 +219,6 @@ class NavigationControl:
                         self.robotGoal[rid] = -1
                     else:
                         self.Flag_terminate[rid] = 1
-
         # Update the robot TM
         for rid, vid in robot_pose.items():
             if self.Flag_terminate[rid] == -1:
@@ -245,7 +243,6 @@ class NavigationControl:
                                 self.PlanExecutedIdx[rid] = [start_idx, -1]
                                 # send the command
                                 Rid_sendRobotTM.append(rid)
-
         #print("PlanExecuted ", self.PlanExecutedIdx)
         #print("Robot TM 2:    ",self.robotTM)
         #print("robotGoal: {}".format(self.robotGoal))
