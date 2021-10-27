@@ -112,6 +112,32 @@ class NavigationControl:
 
                 start_condition[rid].append(scond)
 
+        # --------------------------------------
+        # modify stat_condition -10 26
+        last_idx_init = {}
+        start_condition2 = {}
+        for rid in multipaths.keys():
+            last_idx_init[rid]= -1
+            start_condition2[rid] = []
+
+        for rid1 in multipaths.keys():
+            last_idx = last_idx_init.copy()
+            robot_start_cond = start_condition[rid1].copy()
+            for tidx in range(0,len(robot_start_cond)): # time
+                scond = [] # initialize
+                for cond in robot_start_cond[tidx]:
+                    if cond!=[]:
+                        if last_idx[cond[0]] < cond[1]:
+                            last_idx[cond[0]] = cond[1]
+                            scond.append(cond)
+                    else:
+                        scond.append([])
+
+                start_condition2[rid1].append(scond)
+
+        start_condition = start_condition2
+        #--------------------------------------
+
         # Split navigation paths to robotTM
         robotTM_mapping_set = {}
         scondTM_set = {}

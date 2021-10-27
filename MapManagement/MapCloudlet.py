@@ -10,7 +10,7 @@ class MapCloudlet:
         # Mapfile: MOS map data file
         # AMR_LITF_IDS, AMR_TOW_IDs: list of robot IDs
         self.VEL = 0.5  # velocity used to compute collision
-        self.Collision_DIST = 2.0
+        self.Collision_DIST = 0.3
 
         # Load static_map
         self.static_map = MapMOS(mapfile)
@@ -60,18 +60,9 @@ class MapCloudlet:
         # initialize CARGO
         self.CARGO = {}  # save cargo pose
         for id, vertex in CARGO_init.items():
-            load_id = [-1, -1]
-            for rack_id, rack in self.RACK_LIFT.items():
-                if self.RACK_LIFT[rack_id]['vertex'][0][0] == vertex:
-                    self.RACK_LIFT[rack_id]['load_id'][0][1] = id
-                    load_id[1] = rack_id
-            for rack_id, rack in self.RACK_TOW.items():
-                if self.RACK_TOW[rack_id]['vertex'][0][0] == vertex:
-                    self.RACK_TOW[rack_id]['load_id'][0][1] = id
-                    load_id[1] = rack_id
             pos = [self.static_map.VertexPos[vertex][0], self.static_map.VertexPos[vertex][2]]
             self.CARGO[id] = {'timestamp': [t_init], 'pos': [pos], 'vertex': [[vertex, vertex]],
-                              'load_id': [load_id]}
+                              'load_id': [[-1, -1]]}
 
         # initialize the door
         self.Door = {}
