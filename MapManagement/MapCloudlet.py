@@ -10,7 +10,7 @@ class MapCloudlet:
         # Mapfile: MOS map data file
         # AMR_LITF_IDS, AMR_TOW_IDs: list of robot IDs
         self.VEL = 0.5  # velocity used to compute collision
-        self.Collision_DIST = 0.3
+        self.Collision_DIST = 0.1
 
         # Load static_map
         self.static_map = MapMOS(mapfile)
@@ -340,7 +340,7 @@ class MapCloudlet:
                 # print("call update Nav Plan", self.AMR_LIFT[amr_id]['vertex'][-1], compare_nodes)
 
     def detect_collision(self, T):  # return [AMR_id1, AMR_id2] if collision occurs in time T
-        delT = 0.01
+        delT = 0.02
         trajs = {}
         amr_ids = []
         collision_set = []
@@ -408,8 +408,8 @@ class MapCloudlet:
 
     def convert_pose_to_vertex(self, pose):
         # return two closest vertex from pose, the distance should be less than threshold
-        # th = 0.3
-        th = 0.8
+        # th = 0.6
+        th = 0.7
         dist_set = []
         id_set = []
         for id, ver_pose in self.static_map.VertexPos.items():

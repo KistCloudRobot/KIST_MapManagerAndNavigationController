@@ -18,6 +18,7 @@ class NavigationControl:
         self.robotTM_scond = {} # start condition of robotTM
         self.robotGoal = {} # New: The goal of each robot
         self.robotStart = {} # New: The goal of each robot
+        self.robotPose = {} # current pose of robot
 
         for id in self.AMR_IDs:
             self.robotTM[id] = [] # a sequence of vertices
@@ -89,11 +90,18 @@ class NavigationControl:
     def get_multipath_plan(self, multipaths): # multipath: MultiPath type
         # initialize PlanExecutedIdx
         for id in multipaths.keys():
-            self.robotTM[id] = []  # a sequence of vertices
-            self.robotTM_set[id] = []  # [robotTM, robotTM, robotTM, ...]
-            self.robotTM_scond[id] = []  # start condition of robotTM
-            self.PlanExecutedIdx[id] = [-1, -1] # [i,j] Save the last index of NavPath[i][j] which the robot follows
-            self.Flag_terminate[id] = -1
+            if len(multipaths[id])==1:
+                stationary_check = (self.robotPose[id][0]==self.robotPose[id][1]==multipaths[id][0])
+            else:
+                stationary_check = False
+            
+            if not stationary_check:
+                self.robotTM[id] = []  # a sequence of vertices
+                self.robotTM_set[id] = []  # [robotTM, robotTM, robotTM, ...]
+                self.robotTM_scond[id] = []  # start condition of robotTM
+                self.PlanExecutedIdx[id] = [-1, -1] # [i,j] Save the last index of NavPath[i][j] which the robot follows
+                self.Flag_terminate[id] = -1
+                print(id, self.Flag_terminate)
 
         start_condition = {}
         for key in multipaths.keys():
@@ -197,35 +205,65 @@ class NavigationControl:
         #print("Robot TM 2:    ", self.robotTM)
         # check whether the current TM command is executed
         for rid, vid in robot_pose.items():
+            # if rid == "AMR_TOW1":
+            #     print("terminate ", rid, vid, self.robotGoal[rid], self.Flag_terminate[rid])
+            #     print([self.robotGoal[rid]]*2)
+            #     print(self.robotTM[rid])
+            #     print(self.robotTM_set[rid])
+            #     print("ExecutedIdx", self.PlanExecutedIdx[rid])
+            self.robotPose[rid] = vid
             if self.robotGoal[rid] !=-1:
                 if self.robotTM[rid] != []: # check plan execution
                     compare_nodes = [[self.robotTM[rid][0]]*2]
                     if len(self.robotTM[rid])>1:
                         compare_nodes.append(self.robotTM[rid][0:2])
                         compare_nodes.append([self.robotTM[rid][1], self.robotTM[rid][0]])
-                    if vid in [[self.robotTM[rid][0]]*2]:
+                    # if vid in [[self.robotTM[rid][0]]*2]:
+                    if (vid[0]==self.robotTM[rid][0]) and (vid[1]==self.robotTM[rid][0]):
                         self.PlanExecutedIdx[rid][1] = self.PlanExecutedIdx[rid][1] + 1
+                    
+                    if (vid[0]!=self.robotTM[rid][0]) and (vid[0]==vid[1]):
+                        vidx = self.robotTM[rid].index(vid[0])
+                        self.PlanExecutedIdx[rid][1] = self.PlanExecutedIdx[rid][1] + vidx + 1
+
                 if self.robotTM_set[rid] != []: # check flag_terminate
                     if self.PlanExecutedIdx[rid] == [len(self.robotTM_set[rid])-1, len(self.robotTM_set[rid][-1])-1]:
                         if vid == [self.robotGoal[rid]]*2:
                             self.Flag_terminate[rid] = 0
                             self.robotGoal[rid] = -1
-                        else:
-                            self.Flag_terminate[rid] = 1
-
+                        # else:
+                        #     self.Flag_terminate[rid] = 1
                 else:
-                    if vid == [self.robotGoal[rid]] * 2:
+                    # if vid == [self.robotGoal[rid]]*2:
+                    if (vid[0]==self.robotGoal[rid]) and (vid[1]==self.robotGoal[rid]):
                         self.Flag_terminate[rid] = 0
                         self.robotGoal[rid] = -1
-                    else:
-                        self.Flag_terminate[rid] = 1
+                    # else:
+                    #     self.Flag_terminate[rid] = 1
         # Update the robot TM
+        # print("AMR_TOW1", robot_pose["AMR_TOW1"], self.robotGoal["AMR_TOW1"], self.Flag_terminate["AMR_TOW1"])
+        # print("AMR_TOW1", " TM", self.robotTM["AMR_TOW1"])
+        # print("AMR_TOW1 ", "TM_set ", self.robotTM_set["AMR_TOW1"])
+        # print("AMR_TOW1 ", "ExecutedIdx", self.PlanExecutedIdx["AMR_TOW1"])
+        # print("AMR_TOW1 ", "scond ", self.robotTM_scond["AMR_TOW1"])
+        # print("AMR_TOW2", robot_pose["AMR_TOW2"], self.robotGoal["AMR_TOW2"], self.Flag_terminate["AMR_TOW2"])
+        # print("AMR_TOW2", " TM", self.robotTM["AMR_TOW2"])
+        # print("AMR_TOW2 ", "TM_set ", self.robotTM_set["AMR_TOW2"])
+        # print("AMR_TOW2 ", "ExecutedIdx", self.PlanExecutedIdx["AMR_TOW2"])
+        # print("AMR_TOW2 ", "scond ", self.robotTM_scond["AMR_TOW2"])
         for rid, vid in robot_pose.items():
             if self.Flag_terminate[rid] == -1:
                 if self.robotTM_set[rid] !=[]:
-                    if self.robotTM[rid] !=[]: # update robotTM
-                        if vid in [[self.robotTM[rid][0]]*2]: # if a robot arrives at self.robotTM[rid][0]
-                            self.robotTM[rid].pop(0)
+                    if (self.robotTM[rid]!=[]) and (self.PlanExecutedIdx[rid][1]!=-1): # update robotTM
+                        # if vid in [[self.robotTM[rid][0]]*2]: # if a robot arrives at self.robotTM[rid][0]
+                        if (vid[0]==self.robotTM[rid][0]) and (vid[1]==self.robotTM[rid][0]):
+                            temp_path = self.robotTM[rid]
+                            del temp_path[0]
+                            self.robotTM[rid] = temp_path
+                            # self.robotTM[rid].pop(0)
+                        if (vid[0]!=self.robotTM[rid][0]) and (vid[0]==vid[1]):
+                            vidx = self.robotTM[rid].index(vid[0])
+                            del self.robotTM[rid][:vidx+1]
                     else: # allocate a new robotTM
                         start_idx = self.PlanExecutedIdx[rid][0]+1
                         if self.robotTM_scond[rid][start_idx] == []: # no condition
@@ -238,14 +276,23 @@ class NavigationControl:
                             for cond in self.robotTM_scond[rid][start_idx]:
                                 if self.PlanExecutedIdx[cond[0]][0] < cond[1][0] or self.PlanExecutedIdx[cond[0]][1] < cond[1][1]:
                                     flag_start = False
+                            # for cond in self.robotTM_scond[rid][start_idx][0]:
+                            #     if self.PlanExecutedIdx[cond[0]][0] < cond[1][0] or self.PlanExecutedIdx[cond[0]][1] < cond[1][1]:
+                            #         flag_start = False
                             if flag_start:
                                 self.robotTM[rid] = self.robotTM_set[rid][start_idx].copy()
                                 self.PlanExecutedIdx[rid] = [start_idx, -1]
                                 # send the command
                                 Rid_sendRobotTM.append(rid)
-        #print("PlanExecuted ", self.PlanExecutedIdx)
-        #print("Robot TM 2:    ",self.robotTM)
-        #print("robotGoal: {}".format(self.robotGoal))
+                        # if rid=="AMR_TOW1" or rid=="AMR_TOW2":
+                        #     print(rid, "start_idx: ", start_idx, "executedidx: ", self.PlanExecutedIdx[rid])
+            elif self.Flag_terminate[rid]==0:
+                if self.robotTM[rid]!=[]:
+                    if (vid[0]==self.robotTM[rid][0]) and (vid[1]==self.robotTM[rid][0]):
+                            temp_path = self.robotTM[rid]
+                            del temp_path[0]
+                            self.robotTM[rid] = temp_path
+                            # self.robotTM[rid].pop(0)
 
         return Rid_sendRobotTM
 

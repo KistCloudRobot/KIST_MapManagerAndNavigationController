@@ -323,8 +323,7 @@ class MapManagerAgent(ArbiAgent):
 
     def Collidable_notify(self, consumer):
         while True:
-            time.sleep(3.5)
-            ### Timestamp ###
+            time.sleep(2)
             temp_Collidable_info = self.ltm.MM.detect_collision(10)
             temp_Collidable_num = len(temp_Collidable_info)
             if temp_Collidable_num:
@@ -341,7 +340,7 @@ class MapManagerAgent(ArbiAgent):
                         time=temp_Collidable_info[i][2]
                     )
                 temp_notify = temp_notify + ")"
-                # print(temp_notify.format(num=temp_Collidable_num))
+                print(temp_notify.format(num=temp_Collidable_num))
                 self.notify(consumer, temp_notify.format(num=temp_Collidable_num))
 
     def DoorStatus_notify(self, consumer):
