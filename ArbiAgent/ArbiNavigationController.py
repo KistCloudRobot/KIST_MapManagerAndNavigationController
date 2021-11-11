@@ -346,7 +346,7 @@ class NavigationControlerAgent(ArbiAgent):
                     response = self.request(self.BI_name[robot_id],
                                             Move_gl)  # request move control to robotBI, get response of request
                     response_gl = GLFactory.new_gl_from_gl_string(response)
-                    if response_gl.get_name() == "(fail)":
+                    if response_gl.get_name() == "fail":
                         time.sleep(1)
                         continue
                     else:
@@ -472,7 +472,7 @@ class NavigationControlerAgent(ArbiAgent):
                         response = self.request(self.BI_name[robot_id],
                                                 Move_gl)  # request move control to robotBI, get response of request
                         response_gl = GLFactory.new_gl_from_gl_string(response)
-                        if response_gl.get_name() == "(fail)":
+                        if response_gl.get_name() == "fail":
                             time.sleep(1)
                             continue
                         else:
