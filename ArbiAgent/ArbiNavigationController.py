@@ -28,8 +28,7 @@ class NavigationControllerDataSource(DataSource):
         self.broker = broker_url  # broker address
         self.connect(self.broker, "ds://www.arbi.com/Local/NavigationController", 2)  # connect broker
 
-        self.map_file = str(pathlib.Path(
-            __file__).parent.parent.resolve()) + "/data/map_cloud.txt"  # load map file (~/data/map_cloud.txt)
+        self.map_file = str(pathlib.Path(__file__).parent.parent.resolve()) + "/data/map_cloud.txt"  # load map file (~/data/map_cloud.txt)
         self.MAP = MapMOS(self.map_file)  # interprete map
 
         self.AMR_IDs = ["AMR_LIFT1", "AMR_LIFT2", "AMR_TOW1", "AMR_TOW2"]  # AMR IDs
@@ -143,7 +142,7 @@ class NavigationControllerAgent(ArbiAgent):
 
                 RobotPose_gl = temp_gl.get_expression(i).as_generalized_list()  # get ith gl content
                 robot_id = RobotPose_gl.get_expression(0).as_value().string_value()  # get robotID
-                robot_vertex_gl = RobotPose_gl.get_expression(1).as_generalized_list()  # get current pose (vertex)
+                robot_vertex_gl = RobotPose_gl.get_expression(1).as_generalized_list()  # get current vertex
                 robot_vertex = [robot_vertex_gl.get_expression(0).as_value().int_value(),
                                 robot_vertex_gl.get_expression(1).as_value().int_value()]  # current pose to list
                 multi_robot_pose[robot_id] = robot_vertex
@@ -240,7 +239,13 @@ class NavigationControllerAgent(ArbiAgent):
                     Thread(target=self.Control_request, args=(robot_id, False, True,), daemon=True).start()  # control request of robotID
 
             goal_request_result = "(ok)"  # response to robotTM that request is successful
+<<<<<<< HEAD
             print('send (ok) to ' + str(sender))
+=======
+            
+            print("[on Request] Response of request of {RobotID}: {Result}".format(RobotID=robot_id, Result=goal_request_result))
+
+>>>>>>> d17de2ec65be5e46bb353c953e135db69cb3b490
             return goal_request_result
         else:
             print("what?", str(temp_gl))
