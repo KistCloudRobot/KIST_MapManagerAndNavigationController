@@ -132,15 +132,16 @@ class MapManagerAgent(ArbiAgent):
             "AMR_TOW1": "agent://www.arbi.com/Tow1/ContextManager",
             "AMR_TOW2": "agent://www.arbi.com/Tow2/ContextManager"
         }
-
-        self.robot_goal = {}
-
+        self.robot_goal = {
+            "AMR_LIFT1": -1,
+            "AMR_LIFT2": -1,
+            "AMR_TOW1": -1,
+            "AMR_TOW2": -1
+        }
     def on_start(self):
         self.ltm = MapManagerDataSource(broker_url)
 
         time.sleep(3)  # Wait for ltm initialization
-
-        # Notification ThreadTow1
 
         Thread(target=self.CargoPose_notify, args=(self.CM_name, ), daemon=True).start()
         time.sleep(0.1)
@@ -152,11 +153,6 @@ class MapManagerAgent(ArbiAgent):
         time.sleep(0.1)
         Thread(target=self.RobotPose_notify, args=(), daemon=True).start()
         time.sleep(0.1)
-
-        # Thread(target=self.DoorStatus_notify, args=(self.CM_name, ), daemon=True).start()
-
-        #TODO RobotCM에 보내는 정보 추가
-        # self.RobotPathLeft_notify(self.NC_name)
 
     def close(self):
         self.ltm.unsubscribe(self.sub_RobotInfo_ID)
@@ -183,7 +179,7 @@ class MapManagerAgent(ArbiAgent):
 
             self.ltm.MM.insert_NAV_PLAN(temp_gl_amr_id, temp_path)
             time.sleep(0.05)
-            self.ltm.MM.update_NAVcc_PLAN(temp_gl_amr_id)
+            self.ltm.MM.update_NAV_PLAN(temp_gl_amr_id)
 
     def CargoPose_notify(self, consumer):
         while True:
@@ -343,15 +339,15 @@ class MapManagerAgent(ArbiAgent):
                 print(temp_notify.format(num=temp_Collidable_num))
                 self.notify(consumer, temp_notify.format(num=temp_Collidable_num))
 
-    def DoorStatus_notify(self, consumer):
-        while True:
-            time.sleep(1)
+    # def DoorStatus_notify(self, consumer):
+    #     while True:
+    #         time.sleep(1)
 
-            temp_Door_info = self.ltm.MM.Door
-            temp_Door_status = temp_Door_info['Door0']['status']
-            temp_gl = "(DoorStatus \"{status}\")"
+    #         temp_Door_info = self.ltm.MM.Door
+    #         temp_Door_status = temp_Door_info['Door0']['status']
+    #         temp_gl = "(DoorStatus \"{status}\")"
 
-            self.notify(consumer, temp_gl.format(status=temp_Door_status))
+    #         self.notify(consumer, temp_gl.format(status=temp_Door_status))
 
     # def RobotPathLeft_notify(self, consumer):
     #     temp_AMR_LIFT_Path = self.ltm.MM.Path_AMR_LIFT
@@ -387,7 +383,6 @@ class MapManagerAgent(ArbiAgent):
         query_name = gl_query.get_name()
 
         if query_name == "Collidable":  # From Local CM
-            ### Timestamp ###
             temp_Collidable_info = self.ltm.MM.detect_collision()
             temp_Collidable_num = len(temp_Collidable_info)
             temp_Collidable_block = " (pair \"{robot_id1}\" \"{robot_id2}\" {time})"
@@ -419,7 +414,8 @@ class MapManagerAgent(ArbiAgent):
                     temp_TOW_load = temp_TOW_info['load'][0]
                     temp_TOW_path = self.ltm.MM.Path_AMR_TOW[temp_robot_id]
                     if temp_TOW_path:
-                        temp_TOW_goal = temp_TOW_path[-1]
+                        # temp_TOW_goal = temp_TOW_path[-1]
+                        temp_TOW_goal = self.robot_goal[temp_robot_id]
                     elif not temp_TOW_path:
                         temp_TOW_goal = 0
                     temp_response += " (RobotInfo \"" + str(temp_robot_id) + "\"" + \
@@ -431,7 +427,8 @@ class MapManagerAgent(ArbiAgent):
                     temp_LIFT_load = temp_LIFT_info['load'][0]
                     temp_LIFT_path = self.ltm.MM.Path_AMR_LIFT[temp_robot_id]
                     if temp_LIFT_path:
-                        temp_LIFT_goal = temp_LIFT_path[-1]
+                        # temp_LIFT_goal = temp_LIFT_path[-1]
+                        temp_TOW_goal = self.robot_goal[temp_robot_id]
                     elif not temp_LIFT_path:
                         temp_LIFT_goal = 0
                     else:
