@@ -240,7 +240,7 @@ class NavigationControllerAgent(ArbiAgent):
                     Thread(target=self.Control_request, args=(robot_id, False, True,), daemon=True).start()  # control request of robotID
 
             goal_request_result = "(ok)"  # response to robotTM that request is successful
-
+            print('send (ok) to ' + str(sender))
             return goal_request_result
         else:
             print("what?", str(temp_gl))
@@ -328,6 +328,7 @@ class NavigationControllerAgent(ArbiAgent):
 
                 while True:
                     fail_check = 0
+                    print("1111111111111111111111111111111111111111")
                     move_response = self.request(self.BI_name[robot_id],Move_gl)  # request move control to robotBI, get response of request
                     move_response_gl = GLFactory.new_gl_from_gl_string(move_response)
                     if move_response_gl.get_name() == "fail":
@@ -417,6 +418,7 @@ class NavigationControllerAgent(ArbiAgent):
 
                     while True:
                         fail_check = 0
+                        print("1111111111111111111111111111111111111111")
                         move_response = self.request(self.BI_name[robot_id], Move_gl)  # request move control to robotBI, get response of request
                         move_response_gl = GLFactory.new_gl_from_gl_string(move_response)
                         if move_response_gl.get_name() == "fail":

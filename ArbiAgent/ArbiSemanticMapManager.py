@@ -47,10 +47,10 @@ class MapManagerDataSource(DataSource):
         self.AMR_TOW_init = {"AMR_TOW1": 203, "AMR_TOW2": 204}
 
         self.Rack_LIFT_init = {'RACK_LIFT0': 5, 'RACK_LIFT1': 12, 'RACK_LIFT2': 14,
-                               'RACK_LIFT3': 15, 'RACK_LIFT4': 18, 'RACK_LIFT5': 19}
-        self.Rack_TOW_init = {'RACK_TOW0': 21, 'RACK_TOW1': 20}
+                               'RACK_LIFT3': 22, 'RACK_LIFT4': 18, 'RACK_LIFT5': 19}
+        self.Rack_TOW_init = {'RACK_TOW0': 23, 'RACK_TOW1': 20}
 
-        self.Cargo_init = {"CARGO0":  5, "CARGO1": 18}
+        self.Cargo_init = {"CARGO0":  5, "CARGO1": 18, 'CARGO2': 19}
 
         self.Door_init = {'Door0': 0}
         self.MM = MapCloudlet(self.map_file, self.AMR_LIFT_init, self.AMR_TOW_init, self.Rack_TOW_init,
