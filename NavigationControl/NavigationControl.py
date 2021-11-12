@@ -93,7 +93,6 @@ class NavigationControl:
 
     def get_multipath_plan(self, multipaths):  # multipath: MultiPath type
         # initialize PlanExecutedIdx
-        print("multipath: ", multipaths)
         for id in multipaths.keys():
             if len(multipaths[id]) == 1:
                 stationary_check = (self.robotPose[id][0] == self.robotPose[id][1] == multipaths[id][0])
@@ -201,8 +200,6 @@ class NavigationControl:
 
             #            scond_TM_translated[rid] = scond
             self.robotTM_scond[rid] = scond
-        print("TMSET", self.robotTM_set)
-        print("EXECUTE", self.PlanExecutedIdx)
 
     #        self.robotTM_scond = scond_TM_translated
 
@@ -216,10 +213,7 @@ class NavigationControl:
         robotTM_set = copy.copy(self.robotTM_set)
         robotTM_scond = copy.copy(self.robotTM_scond)
         test = 0
-        print("==================================================================================================")
         for rid, vid in robot_pose.items():
-            print(rid, "path", robotTM[rid], robotTM_set[rid])
-            print(rid, "scond", robotTM_scond[rid])
 
             self.robotPose[rid] = vid
             robotTM_check = {"current": False, "skip": False}
@@ -298,9 +292,6 @@ class NavigationControl:
                         self.robotTM[rid] = temp_path
             # print(rid, robotTM[rid], robotTM_set[rid], self.PlanExecutedIdx[rid])
             # print(self.robotGoal)
-            test += 1
-            print(rid, "execute", self.PlanExecutedIdx[rid])
-        print("Iteration TEST : ", test)
         return Rid_sendRobotTM
 
     ### BACKUP ###

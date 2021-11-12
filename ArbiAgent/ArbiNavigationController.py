@@ -300,7 +300,7 @@ class NavigationControllerAgent(ArbiAgent):
                             continue
                         else:
                             result = cancel_response_gl.get_expression(1).as_value().string_value()  # "success" if Cancel request is done
-                            print("[Request] Request {RobotID} to Cancel Path: {Result}}".format(RobotID=robot_id, Result=result))
+                            print("[Request] Request {RobotID} to Cancel Path: {Result}".format(RobotID=robot_id, Result=result))
                             time.sleep(0.5)
                             break
 
@@ -324,14 +324,14 @@ class NavigationControllerAgent(ArbiAgent):
                 temp_Move_gl = "(move (actionID {actionID}) {path})"
                 path_gl = self.path_gl_generator(robot_path, robot_id)  # convert path list to path gl
                 Move_gl = temp_Move_gl.format(actionID=self.BI_actionID[robot_id][0], path=path_gl)
-                print("[Request] Request {RobotID} to go {Path}".format(RobotID=robot_id, Path=path_gl))
+                print("[Request] Request {RobotID} to go {Path}".format(RobotID=robot_id, Path=str(path_gl)))
 
                 while True:
                     fail_check = 0
                     move_response = self.request(self.BI_name[robot_id],Move_gl)  # request move control to robotBI, get response of request
                     move_response_gl = GLFactory.new_gl_from_gl_string(move_response)
                     if move_response_gl.get_name() == "fail":
-                        print("[Request] Request {RobotID} to go {Path}: FAIL".format(RobotID=robot_id, Path=path_gl))
+                        print("[Request] Request {RobotID} to go {Path}: FAIL".format(RobotID=robot_id, Path=str(path_gl)))
                         fail_check += 1
                         time.sleep(1)
                         if fail_check > 3:
@@ -339,7 +339,7 @@ class NavigationControllerAgent(ArbiAgent):
                         continue
                     else:
                         result = move_response_gl.get_expression(1).as_value().string_value()  # "success" if request is done, "(fail)"" if request can't be handled
-                        print("[Request] Request {RobotID} to go {Path}: {Result}}".format(RobotID=robot_id, Path=path_gl, Result=result))
+                        print("[Request] Request {RobotID} to go {Path}: {Result}".format(RobotID=robot_id, Path=str(path_gl), Result=str(result)))
                         break
 
             elif len(self.ltm.NC.robotTM_set[robot_id]) >= 2:  # split path (avoiding path)
@@ -376,7 +376,7 @@ class NavigationControllerAgent(ArbiAgent):
                             continue
                         else:
                             result = cancel_response_gl.get_expression(1).as_value().string_value()  # "success" if Cancel request is done
-                            print("[Request] Request {RobotID} to Cancel Path: {Result}}".format(RobotID=robot_id, Result=result))
+                            print("[Request] Request {RobotID} to Cancel Path: {Result}".format(RobotID=robot_id, Result=result))
                             time.sleep(0.5)
                             break
 
@@ -413,14 +413,14 @@ class NavigationControllerAgent(ArbiAgent):
                     temp_Move_gl = "(move (actionID {actionID}) {path})"
                     path_gl = self.path_gl_generator(robot_path, robot_id)  # convert path list to path gl
                     Move_gl = temp_Move_gl.format(actionID=self.BI_actionID[robot_id][0], path=path_gl)
-                    print("[Request] Request {RobotID} to go {Path}".format(RobotID=robot_id, Path=path_gl))
+                    print("[Request] Request {RobotID} to go {Path}".format(RobotID=robot_id, Path=str(path_gl)))
 
                     while True:
                         fail_check = 0
                         move_response = self.request(self.BI_name[robot_id], Move_gl)  # request move control to robotBI, get response of request
                         move_response_gl = GLFactory.new_gl_from_gl_string(move_response)
                         if move_response_gl.get_name() == "fail":
-                            print("[Request] Request {RobotID} to go {Path}: FAIL".format(RobotID=robot_id, Path=path_gl))
+                            print("[Request] Request {RobotID} to go {Path}: FAIL".format(RobotID=robot_id, Path=str(path_gl)))
                             fail_check += 1
                             time.sleep(1)
                             if fail_check > 3:
@@ -428,7 +428,7 @@ class NavigationControllerAgent(ArbiAgent):
                             continue
                         else:
                             result = move_response_gl.get_expression(1).as_value().string_value()  # "success" if request is done, "(fail)"" if request can't be handled
-                            print("[Request] Request {RobotID} to go {Path}: {Result}}".format(RobotID=robot_id, Path=path_gl, Result=result))
+                            print("[Request] Request {RobotID} to go {Path}: {Result})".format(RobotID=robot_id, Path=str(path_gl), Result=str(result)))
                             break
 
                 self.avoid_flag[robot_id] = False  # update avoiding state of robot
@@ -443,13 +443,15 @@ class NavigationControllerAgent(ArbiAgent):
 
     def SMM_notify(self, robot_id):  # notify SMM of control information
         ''' RobotPathPlan gl format: (RobotPathPlan $robot_id $goal (path $v_id1 $v_id2 ….)) '''
-
-        temp_SMM_gl = "(RobotPathPlan \"{robot_id}\" {goal} {path})"
-        robot_path = copy.copy(self.ltm.NC.robotTM[robot_id])
-        path_gl = self.path_gl_generator(robot_path, robot_id)  # convert path list to path gl
-        SMM_gl = temp_SMM_gl.format(robot_id=robot_id, goal=self.actual_goal[robot_id], path=path_gl)
-        print("[Notify] Notify Path and Goal of {RobotID} to SMM".format(RobotID=robot_id))
-        self.notify(self.SMM_name, SMM_gl)  # notify SMM
+        if self.ltm.NC.robotTM[robot_id]:
+            temp_SMM_gl = "(RobotPathPlan \"{robot_id}\" {goal} {path})"
+            robot_path = copy.copy(self.ltm.NC.robotTM[robot_id])
+            path_gl = self.path_gl_generator(robot_path, robot_id)  # convert path list to path gl
+            SMM_gl = temp_SMM_gl.format(robot_id=robot_id, goal=self.actual_goal[robot_id], path=path_gl)
+            print("[Notify] Notify Path and Goal of {RobotID} to SMM".format(RobotID=robot_id))
+            self.notify(self.SMM_name, SMM_gl)  # notify SMM
+        else:
+            print("[INFO] {RobotID} has no path".format(RobotID=robot_id))
 
     def path_gl_generator(self, path, robot_id):  # convert path list to path gl
         ''' path gl format: (path $v_id1 $v_id2 ….) '''
@@ -473,9 +475,8 @@ class NavigationControllerAgent(ArbiAgent):
                     self.move_flag[robot_id] = False  # update state of robot to not moving
                     ''' MoveResult gl format: (MoveResult (actionID $actionID) $robotID $result) '''
 
-                    goal_result_gl = "(MoveResult (actionID \"{ActionID}\") \"{RobotID}\" \"{Result}\")".format(
+                    goal_result_gl = "(MoveResult (actionID \"{ActionID}\") \"{Result}\")".format(
                         ActionID=self.goal_actionID[robot_id],
-                        RobotID=robot_id,
                         Result="success")
                     print("[INFO] \"{RobotID}\" to \"{GoalID}\": success".format(RobotID=robot_id,
                                                                                  GoalID=self.actual_goal[robot_id]))

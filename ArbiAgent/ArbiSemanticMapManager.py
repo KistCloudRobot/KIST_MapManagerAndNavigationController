@@ -6,7 +6,7 @@ from threading import Condition, Thread
 sys.path.append("D:\CloudRobot\Python-mcArbiFramework")
 from arbi_agent.agent.arbi_agent import ArbiAgent
 from arbi_agent.ltm.data_source import DataSource
-from arbi_agent.agent import arbi_agent_excutor
+from arbi_agent.agent import arbi_agent_executor
 from arbi_agent.model import generalized_list_factory as GLFactory
 
 sys.path.append(str(pathlib.Path(__file__).parent.parent.resolve()))
@@ -16,7 +16,7 @@ from MapManagement.MapCloudlet import MapCloudlet
 from DataType.RobotInfo import RobotInfo
 from DataType.CallInfo import CallInfo
 
-broker_url = "tcp://127.0.0.1:61316"
+broker_url = "tcp://127.0.0.1:61313"
 # broker_url = 'tcp://' + os.environ["JMS_BROKER"]
 
 
@@ -46,7 +46,7 @@ class MapManagerDataSource(DataSource):
         self.AMR_LIFT_init = {"AMR_LIFT1": 201, "AMR_LIFT2": 202}
         self.AMR_TOW_init = {"AMR_TOW1": 203, "AMR_TOW2": 204}
 
-        self.Rack_LIFT_init = {'RACK_LIFT0': 5, 'RACK_LIFT1': 13, 'RACK_LIFT2': 14,
+        self.Rack_LIFT_init = {'RACK_LIFT0': 5, 'RACK_LIFT1': 12, 'RACK_LIFT2': 14,
                                'RACK_LIFT3': 15, 'RACK_LIFT4': 18, 'RACK_LIFT5': 19}
         self.Rack_TOW_init = {'RACK_TOW0': 21, 'RACK_TOW1': 20}
 
@@ -445,7 +445,7 @@ class MapManagerAgent(ArbiAgent):
 
 if __name__ == "__main__":
     agent = MapManagerAgent()
-    arbi_agent_excutor.execute(broker_url=broker_url, agent_name="agent://www.arbi.com/Local/MapManager",
+    arbi_agent_executor.execute(broker_url=broker_url, agent_name="agent://www.arbi.com/Local/MapManager",
                                agent=agent, broker_type=2)  # same role with agent.initialize
 
     while True:
