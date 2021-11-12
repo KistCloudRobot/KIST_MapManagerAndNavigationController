@@ -17,7 +17,7 @@ from MapManagement.MapMOS import MapMOS
 from NavigationControl.NavigationControl import NavigationControl
 
 agent_MAPF = "agent://www.arbi.com/Local/MultiAgentPathFinder"
-broker_url = "tcp://127.0.0.1:61313"
+broker_url = "tcp://172.16.165.171:61313"
 
 
 # broker_url = 'tcp://' + os.environ["JMS_BROKER"]
@@ -127,7 +127,7 @@ class NavigationControllerAgent(ArbiAgent):
         print(data)
 
     def on_notify(self, sender, notification):  # executed when the agent gets notification
-        print("[on Notify] " + notification)
+        # print("[on Notify] " + notification)
         temp_gl = GLFactory.new_gl_from_gl_string(notification)  # notification to gl
         gl_name = temp_gl.get_name()  # get name of gl
         
@@ -202,6 +202,7 @@ class NavigationControllerAgent(ArbiAgent):
             robot_goal = {}  # {robotID: goalVertex}
             action_id = temp_gl.get_expression(0).as_generalized_list().get_expression(0).as_value().string_value()  # get actionID
             robot_id = temp_gl.get_expression(1).as_value().string_value()  # get robotID
+            requested_robot_id = robot_id
             self.goal_actionID[robot_id] = action_id  # update actionID in agent
             temp_start = temp_gl.get_expression(2).as_value().int_value()
             real_goal = temp_gl.get_expression(3).as_value().int_value()  # get goalVertex
@@ -239,13 +240,10 @@ class NavigationControllerAgent(ArbiAgent):
                     Thread(target=self.Control_request, args=(robot_id, False, True,), daemon=True).start()  # control request of robotID
 
             goal_request_result = "(ok)"  # response to robotTM that request is successful
-<<<<<<< HEAD
-            print('send (ok) to ' + str(sender))
-=======
-            
-            print("[on Request] Response of request of {RobotID}: {Result}".format(RobotID=robot_id, Result=goal_request_result))
+            print('[on Request] send (ok) to ' + str(sender) + " about request " + str(request))
 
->>>>>>> d17de2ec65be5e46bb353c953e135db69cb3b490
+            print("[on Request] Response of request of {RobotID}: {Result}".format(RobotID=requested_robot_id, Result=goal_request_result))
+
             return goal_request_result
         else:
             print("what?", str(temp_gl))
@@ -331,8 +329,9 @@ class NavigationControllerAgent(ArbiAgent):
                 Move_gl = temp_Move_gl.format(actionID=self.BI_actionID[robot_id][0], path=path_gl)
                 print("[Request] Request {RobotID} to go {Path}".format(RobotID=robot_id, Path=str(path_gl)))
 
+                fail_check = 0
                 while True:
-                    fail_check = 0
+
                     print("1111111111111111111111111111111111111111")
                     move_response = self.request(self.BI_name[robot_id],Move_gl)  # request move control to robotBI, get response of request
                     move_response_gl = GLFactory.new_gl_from_gl_string(move_response)
@@ -340,7 +339,7 @@ class NavigationControllerAgent(ArbiAgent):
                         print("[Request] Request {RobotID} to go {Path}: FAIL".format(RobotID=robot_id, Path=str(path_gl)))
                         fail_check += 1
                         time.sleep(1)
-                        if fail_check > 3:
+                        if fail_check > 1:
                             return
                         continue
                     else:
@@ -421,16 +420,15 @@ class NavigationControllerAgent(ArbiAgent):
                     Move_gl = temp_Move_gl.format(actionID=self.BI_actionID[robot_id][0], path=path_gl)
                     print("[Request] Request {RobotID} to go {Path}".format(RobotID=robot_id, Path=str(path_gl)))
 
+                    fail_check = 1
                     while True:
-                        fail_check = 0
-                        print("1111111111111111111111111111111111111111")
                         move_response = self.request(self.BI_name[robot_id], Move_gl)  # request move control to robotBI, get response of request
                         move_response_gl = GLFactory.new_gl_from_gl_string(move_response)
                         if move_response_gl.get_name() == "fail":
                             print("[Request] Request {RobotID} to go {Path}: FAIL".format(RobotID=robot_id, Path=str(path_gl)))
                             fail_check += 1
                             time.sleep(1)
-                            if fail_check > 3:
+                            if fail_check > 1:
                                 return
                             continue
                         else:

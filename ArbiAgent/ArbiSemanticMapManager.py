@@ -16,7 +16,7 @@ from MapManagement.MapCloudlet import MapCloudlet
 from DataType.RobotInfo import RobotInfo
 from DataType.CallInfo import CallInfo
 
-broker_url = "tcp://127.0.0.1:61313"
+broker_url = "tcp://172.16.165.171:61313"
 # broker_url = 'tcp://' + os.environ["JMS_BROKER"]
 
 
@@ -54,18 +54,13 @@ class MapManagerDataSource(DataSource):
         self.AMR_TOW_init = {"AMR_TOW1": 203, "AMR_TOW2": 204} # Initial vertex of TOW
 
         self.Rack_LIFT_init = {'RACK_LIFT0': 5, 'RACK_LIFT1': 12, 'RACK_LIFT2': 14,
-<<<<<<< HEAD
                                'RACK_LIFT3': 22, 'RACK_LIFT4': 18, 'RACK_LIFT5': 19}
         self.Rack_TOW_init = {'RACK_TOW0': 23, 'RACK_TOW1': 20}
 
         self.Cargo_init = {"CARGO0":  5, "CARGO1": 18, 'CARGO2': 19}
-=======
-                               'RACK_LIFT3': 15, 'RACK_LIFT4': 18, 'RACK_LIFT5': 19} # Initial vertex of LIFT Rack
         self.Rack_TOW_init = {'RACK_TOW0': 21, 'RACK_TOW1': 20} # Initial vertex of TOW Rack
 
         self.Cargo_init = {"CARGO0":  5, "CARGO1": 18} # Initial vertex of Cargo
->>>>>>> d17de2ec65be5e46bb353c953e135db69cb3b490
-
         self.Door_init = {'Door0': 0} # Initial status of Door
         self.MC = MapCloudlet(self.map_file, self.AMR_LIFT_init, self.AMR_TOW_init, self.Rack_TOW_init,
                               self.Rack_LIFT_init, self.Cargo_init, self.Door_init) # launch MC(MapCloudlet)
