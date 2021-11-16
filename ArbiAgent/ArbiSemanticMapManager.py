@@ -458,7 +458,7 @@ class MapManagerAgent(ArbiAgent):
                     temp_LIFT_path = self.ltm.MC.Path_AMR_LIFT[temp_robot_id]
                     if temp_LIFT_path:
                         # temp_LIFT_goal = temp_LIFT_path[-1]
-                        temp_TOW_goal = self.robot_goal[temp_robot_id]
+                        temp_LIFT_goal = self.robot_goal[temp_robot_id]
                     elif not temp_LIFT_path:
                         temp_LIFT_goal = 0
                     else:
