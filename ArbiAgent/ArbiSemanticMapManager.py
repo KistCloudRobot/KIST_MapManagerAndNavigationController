@@ -163,6 +163,7 @@ class MapManagerAgent(ArbiAgent):
         time.sleep(0.1)
         Thread(target=self.RobotPose_notify, args=(), daemon=True).start() # RobotPose Notify thread
         time.sleep(0.1)
+        Thread(target=self.Plan_update, args=(self.ltm.AMR_IDs, ), daemon=True).start()
 
     def close(self):
         self.ltm.unsubscribe(self.sub_RobotInfo_ID)
@@ -335,11 +336,17 @@ class MapManagerAgent(ArbiAgent):
                 )
                 self.notify(self.TOW_CM_name.get(robot_id), gl)
 
+    def Plan_update(self, robot_ids):
+        while True:
+            time.sleep(1)
+            for robot_id in robot_ids:
+                self.ltm.MC.update_NAV_PLAN(robot_id)
+
     def Collidable_notify(self, consumer): # Check Collidable every 2 sec and Notify if it has to NC
         ''' Collidable gl format: (Collidable $num (pair $robot_id $robot_id $time), …) '''
 
         while True:
-            time.sleep(2)
+            time.sleep(1)
             temp_Collidable_info = self.ltm.MC.detect_collision(10)
             temp_Collidable_num = len(temp_Collidable_info)
             if temp_Collidable_num:

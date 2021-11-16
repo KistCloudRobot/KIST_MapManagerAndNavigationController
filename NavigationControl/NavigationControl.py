@@ -35,6 +35,8 @@ class NavigationControl:
             self.PlanExecutedIdx[id] = [-1, -1]  # [i,j] Save the last index of NavPath[i][j] which the robot follows
             self.Flag_terminate[id] = 0
 
+        self.count = 0
+
     # New
     def allocate_goal(self, goals, robot_pose):  # execute when the robot TM allocates a goal to each robot
         # goals: {robot_id: goal vertex, ....}, robot_pose = {id, [vertex, vertex]}
@@ -92,6 +94,9 @@ class NavigationControl:
         return Rid_replan, Rid_robotTM
 
     def get_multipath_plan(self, multipaths):  # multipath: MultiPath type
+        num = "[" + str(self.count) + "]"
+        self.count = self.count + 1
+
         # initialize PlanExecutedIdx
         for id in multipaths.keys():
             if len(multipaths[id]) == 1:
@@ -128,6 +133,7 @@ class NavigationControl:
         # modify stat_condition -10 26
         last_idx_init = {}
         start_condition2 = {}
+
         for rid in multipaths.keys():
             last_idx_init[rid] = -1
             start_condition2[rid] = []
@@ -153,6 +159,7 @@ class NavigationControl:
         # Split navigation paths to robotTM
         robotTM_mapping_set = {}
         scondTM_set = {}
+
         for rid, path in multipaths.items():
             robotTM_seq = []
             robotTM_mapping = []  # save index of robotTM_set corresponding to each element in path
@@ -186,13 +193,18 @@ class NavigationControl:
 
         # find start condnition for TM
         scond_TM_translated = {}
+
         for rid in multipaths.keys():
             scond = []
             for tt in range(0, len(scondTM_set[rid])):
                 if scondTM_set[rid][tt] != []:
                     cond_cur = []
                     for cond in scondTM_set[rid][tt]:
-                        cond_cur.append([cond[0], robotTM_mapping_set[cond[0]][cond[1]]])
+                        print(num, "cond : " + str(cond))
+                        print(num, "robotTM_mapping_set : " + str(robotTM_mapping_set))
+                        if (len(robotTM_mapping_set[cond[0]][0]) > 0) and (len(robotTM_mapping_set[cond[0]]) > cond[1]):
+                            print(num, "robotTM_mapping_set[cond[0]][cond[1]] : " + str(robotTM_mapping_set[cond[0]][cond[1]]))
+                            cond_cur.append([cond[0], robotTM_mapping_set[cond[0]][cond[1]]])
 
                     scond.append(cond_cur)
                 else:

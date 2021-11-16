@@ -115,6 +115,14 @@ class NavigationControllerAgent(ArbiAgent):
             "AMR_TOW2": False
         }  # identify whether robot is in avoiding plan
 
+
+        self.threads = {
+            "AMR_LIFT": None,
+            "AMR_LIFT2": None,
+            "AMR_TOW1": None,
+            "AMR_TOW2": None
+        }
+
     def on_start(self):  # executed when the agent initializes
         self.ltm = NavigationControllerDataSource(broker_url)  # ltm class
         self.ltm.connect(broker_url, "ds://www.arbi.com/Local/NavigationController", 2)  # connect ltm
@@ -124,7 +132,8 @@ class NavigationControllerAgent(ArbiAgent):
         Thread(target=self.Goal_check, args=(), daemon=True).start()  # chehck goal status of each robot every 1sec
 
     def on_data(self, sender: str, data: str):  # N/A
-        print(data)
+        # print(data)
+        pass
 
     def on_notify(self, sender, notification):  # executed when the agent gets notification
         # print("[on Notify] " + notification)
@@ -209,11 +218,12 @@ class NavigationControllerAgent(ArbiAgent):
             self.real_goal[robot_id] = real_goal
 
             actual_goal_gl = "(context (NavigationVertex {realGoal} $vertex))".format(realGoal=real_goal)
-            print("[Query] Query to CM about vertex {realGoal}".format(realGoal=real_goal))
+            print("[{action_id}][Query1] Query to CM about vertex {realGoal}".format(action_id=action_id, realGoal=real_goal))
             actual_goal_response = self.query(self.CM_name, actual_goal_gl)
             actual_goal_response_gl = GLFactory.new_gl_from_gl_string(actual_goal_response)
-            print("[Query] response from CM: ", actual_goal_response_gl)
+            print("[{action_id}][Query2] response from CM : {response_gl}".format(action_id=action_id, response_gl=str(actual_goal_response_gl)))
             actual_goal = actual_goal_response_gl.get_expression(0).as_generalized_list().get_expression(1).as_value().int_value()
+            print("[{action_id}] actual goal : {actual_goal}".format(action_id=action_id, actual_goal=actual_goal))
             self.actual_goal[robot_id] = actual_goal
 
             robot_goal[robot_id] = actual_goal  # robotID-goalVertex pair
@@ -224,25 +234,28 @@ class NavigationControllerAgent(ArbiAgent):
             if robot_id_BI:  # check whether robot_id_BI is empty
                 for robot_id in robot_id_BI:
                     self.SMM_notify(robot_id)  # # notify SMM of same control information
-                    print("[INFO] {RobotID} Control request by <Move> Request".format(RobotID=robot_id))
+                    print("[{action_id}][INFO3] {RobotID} Control request by <Move> Request".format(action_id=action_id, RobotID=robot_id))
                     Thread(target=self.Control_request, args=(robot_id, False, True,), daemon=True).start()  # control request of robotID
 
             if robot_id_replan:  # check whether robot_id_replan is empty
                 path_response = self.MultiRobotPath_query(robot_id_replan)  # query about not collidable path to MultiAgentPathFinder(MAPF)
                 path_response_gl = GLFactory.new_gl_from_gl_string(path_response)
+                print("[{action_id}] before update".format(action_id=action_id))
                 ''' path_response_gl gl format: (MultiRobotPath (RobotPath $robot_id (path $v_id1 $v_id2 $v_id3, ...)), …) '''
 
                 robot_ids = self.MultiRobotPath_update(path_response_gl)  # update path of robot in NC
+                print("[{action_id}] after update".format(action_id=action_id))
 
                 for robot_id in robot_ids:
+                    print("[{action_id}] tmp7".format(action_id=action_id))
                     self.SMM_notify(robot_id)  # # notify SMM of same control information
-                    print("[INFO] {RobotID} Control request by <Move> Request".format(RobotID=robot_id))
+                    print("[{action_id}][INFO4] {RobotID} Control request by <Move> Request".format(action_id=action_id, RobotID=robot_id))
                     Thread(target=self.Control_request, args=(robot_id, False, True,), daemon=True).start()  # control request of robotID
 
             goal_request_result = "(ok)"  # response to robotTM that request is successful
-            print('[on Request] send (ok) to ' + str(sender) + " about request " + str(request))
+            print('[{action_id}][on Request5] send (ok) to ' + str(sender) + " about request " + str(request))
 
-            print("[on Request] Response of request of {RobotID}: {Result}".format(RobotID=requested_robot_id, Result=goal_request_result))
+            print("[{action_id}][on Request6] Response of request of {RobotID}: {Result}".format(action_id=action_id, RobotID=requested_robot_id, Result=goal_request_result))
 
             return goal_request_result
         else:
@@ -250,6 +263,7 @@ class NavigationControllerAgent(ArbiAgent):
             return "(fail)"
 
     def Control_request(self, robot_id, collide, replan):
+        print("111111111111111", self.ltm.NC.robotTM_set[robot_id])
         ''' if robot is in stationary state, output from MAPF path is same with current vertex
             e.g. "AMR_TOW1" : in stationary state, no plan to move
                 -> self.cur_robot_pose["AMR_TOW1"][0] == self.cur_robot_pose["AMR_TOW1"][1]
@@ -260,10 +274,10 @@ class NavigationControllerAgent(ArbiAgent):
     
         if collide:
             self.collide_flag[robot_id] = True
-            counterpart_check = {0: 1, 1: 0, 2: 3, 3: 2}
-            robot_index = self.AMR_IDs.index(robot_id)
-            c_robot_id = self.AMR_IDs[counterpart_check[robot_index]]  # get robotID of counterpart robot
-            self.collide_flag[c_robot_id] = True
+            # counterpart_check = {0: 1, 1: 0, 2: 3, 3: 2}
+            # robot_index = self.AMR_IDs.index(robot_id)
+            # c_robot_id = self.AMR_IDs[counterpart_check[robot_index]]  # get robotID of counterpart robot
+            # self.collide_flag[c_robot_id] = True
             time.sleep(1)
         elif replan:
             time.sleep(1)
@@ -493,14 +507,13 @@ class NavigationControllerAgent(ArbiAgent):
 
     def MultiRobotPath_update(self, response_gl):  # update paths of robots in NC
         ''' MultiRobotPath gl format: (MultiRobotPath (RobotPath $robot_id (path $v_id1 $v_id2 $v_id3, ...)), …) '''
-
+        print("start update")
         multipaths = dict()  # {robotoID: path}
         robot_num = response_gl.get_expression_size()  # get number of robots
         robot_pose = {}  # {robotID: [vertex, vertex]}
         robot_ids = []
         for i in range(robot_num):
             ''' RobotPath gl format: (RobotPath $robot_id (path $v_id1 $v_id2 $v_id3, ...)) '''
-
             robot_info = response_gl.get_expression(i).as_generalized_list()  # get RobotPath information from gl
             robot_id = robot_info.get_expression(0).as_value().string_value()  # get robotID
             robot_ids.append(robot_id)
@@ -513,9 +526,14 @@ class NavigationControllerAgent(ArbiAgent):
             multipaths[robot_id] = path
             robot_pose[robot_id] = copy.copy(self.cur_robot_pose[robot_id])  # get current pose of robot
 
+        print("before plan : " + str(multipaths))
         self.ltm.NC.get_multipath_plan(multipaths)  # update path in NC
+        print("after plan : " + str(multipaths))
+        print("before update TM : " + str(robot_pose))
         self.ltm.NC.update_robot_TM(robot_pose)  # update pose in NC
+        print("after update TM : " + str(robot_pose))
 
+        print("end update : " + str(robot_ids))
         return robot_ids
 
     def MultiRobotPath_query(self, robot_id_replan):  # query about path to MultiAgentPathFinder(MAPF)
