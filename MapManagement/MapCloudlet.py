@@ -10,7 +10,7 @@ class MapCloudlet:
         # Mapfile: MOS map data file
         # AMR_LITF_IDS, AMR_TOW_IDs: list of robot IDs
         self.VEL = 0.5  # velocity used to compute collision
-        self.Collision_DIST = 0.1
+        self.Collision_DIST = 0.05
 
         # Load static_map
         self.static_map = MapMOS(mapfile)
@@ -189,7 +189,7 @@ class MapCloudlet:
         self.update_NAV_PLAN(info.id)
 
     def robot_update_rule(self, robot, info):  # define the update rule of robot status: return true to update
-        return info.vertex != robot[info.id]['vertex'][-1] or info.load != robot[info.id][
+        return info.vertex != robot[info.id]['vertex'][0] or info.load != robot[info.id][
             'load']  # or info.status!= robot[info.id]['status'][-1]
 
     def update_MOS_door_info(self, info):  # update door_state is updated by MOS #TODO: Check
@@ -203,8 +203,8 @@ class MapCloudlet:
         self.CARGO_ID_NUM = self.CARGO_ID_NUM + 1
         # search the rack corresponding to the call
         rack_id = self.search_obj_at_vertex(self.RACK_LIFT, info.vertex)
-        rack_pos = self.RACK_LIFT[rack_id]['pos'][-1]
-        amr_lift_id = self.RACK_LIFT[rack_id]['load_id'][-1][0]
+        rack_pos = self.RACK_LIFT[rack_id]['pos'][0]
+        amr_lift_id = self.RACK_LIFT[rack_id]['load_id'][0][0]
         self.CARGO_IDs.append(new_cargo_id)
 
         # ADD CARGO
@@ -220,8 +220,8 @@ class MapCloudlet:
         # update AMR-LIFT
         if amr_lift_id != -1:
             self.AMR_LIFT[amr_lift_id]['timestamp'].append(info.timestamp)
-            self.AMR_LIFT[amr_lift_id]['pos'].append(self.AMR_LIFT[amr_lift_id]['pos'][-1])
-            self.AMR_LIFT[amr_lift_id]['vertex'].append(self.AMR_LIFT[amr_lift_id]['vertex'][-1])
+            self.AMR_LIFT[amr_lift_id]['pos'].append(self.AMR_LIFT[amr_lift_id]['pos'][0])
+            self.AMR_LIFT[amr_lift_id]['vertex'].append(self.AMR_LIFT[amr_lift_id]['vertex'][0])
             self.AMR_LIFT[amr_lift_id]['load'].append(1)
             self.AMR_LIFT[amr_lift_id]['load_id'].append([rack_id, new_cargo_id])
 
@@ -234,7 +234,7 @@ class MapCloudlet:
                                                 [self.STATION_LITF_TO_TOW[1], self.STATION_LITF_TO_TOW[1]])
 
         # update the rack_lift
-        amr_lift_id = self.RACK_LIFT[rack_lift_id]['load_id'][-1][0]
+        amr_lift_id = self.RACK_LIFT[rack_lift_id]['load_id'][0][0]
         self.RACK_LIFT[rack_lift_id]['timestamp'].append(info_call.timestamp)
         postmp = self.static_map.VertexPos[self.STATION_LITF_TO_TOW[0]]
         self.RACK_LIFT[rack_lift_id]['pos'].append([postmp[0], postmp[2]])
@@ -244,13 +244,13 @@ class MapCloudlet:
         # update the AMR_LIFT
         if amr_lift_id != -1:
             self.AMR_LIFT[amr_lift_id]['timestamp'].append(info_call.timestamp)
-            self.AMR_LIFT[amr_lift_id]['pos'].append(self.AMR_LIFT[amr_lift_id]['pos'][-1])
-            self.AMR_LIFT[amr_lift_id]['vertex'].append(self.AMR_LIFT[amr_lift_id]['vertex'][-1])
+            self.AMR_LIFT[amr_lift_id]['pos'].append(self.AMR_LIFT[amr_lift_id]['pos'][0])
+            self.AMR_LIFT[amr_lift_id]['vertex'].append(self.AMR_LIFT[amr_lift_id]['vertex'][0])
             self.AMR_LIFT[amr_lift_id]['load'].append(1)
             self.AMR_LIFT[amr_lift_id]['load_id'].append([rack_lift_id, -1])
 
         # update the rack_tow
-        amr_tow_id = self.RACK_TOW[rack_tow_id]['load_id'][-1][0]
+        amr_tow_id = self.RACK_TOW[rack_tow_id]['load_id'][0][0]
         self.RACK_TOW[rack_tow_id]['timestamp'].append(info_call.timestamp)
         postmp = self.static_map.VertexPos[self.STATION_LITF_TO_TOW[1]]
         self.RACK_TOW[rack_tow_id]['pos'].append([postmp[0], postmp[2]])
@@ -260,8 +260,8 @@ class MapCloudlet:
         # update the AMR_TOW
         if amr_tow_id != -1:
             self.AMR_TOW[amr_tow_id]['timestamp'].append(info_call.timestamp)
-            self.AMR_TOW[amr_tow_id]['pos'].append(self.AMR_TOW[amr_tow_id]['pos'][-1])
-            self.AMR_TOW[amr_tow_id]['vertex'].append(self.AMR_TOW[amr_tow_id]['vertex'][-1])
+            self.AMR_TOW[amr_tow_id]['pos'].append(self.AMR_TOW[amr_tow_id]['pos'][0])
+            self.AMR_TOW[amr_tow_id]['vertex'].append(self.AMR_TOW[amr_tow_id]['vertex'][0])
             self.AMR_TOW[amr_tow_id]['load'].append(1)
             self.AMR_TOW[amr_tow_id]['load_id'].append([rack_tow_id, cargo_id])
 
@@ -282,17 +282,17 @@ class MapCloudlet:
         self.CARGO_IDs.remove(cargo_id)
 
         # update the rack_tow
-        amr_tow_id = self.RACK_TOW[rack_tow_id]['load_id'][-1][0]
+        amr_tow_id = self.RACK_TOW[rack_tow_id]['load_id'][0][0]
         self.RACK_TOW[rack_tow_id]['timestamp'].append(info_call.timestamp)
-        self.RACK_TOW[rack_tow_id]['pos'].append(self.RACK_TOW[rack_tow_id]['pos'][-1])
-        self.RACK_TOW[rack_tow_id]['vertex'].append(self.RACK_TOW[rack_tow_id]['vertex'][-1])
+        self.RACK_TOW[rack_tow_id]['pos'].append(self.RACK_TOW[rack_tow_id]['pos'][0])
+        self.RACK_TOW[rack_tow_id]['vertex'].append(self.RACK_TOW[rack_tow_id]['vertex'][0])
         self.RACK_TOW[rack_tow_id]['load_id'].append([amr_tow_id, -1])
 
         # update the AMR_TOW
         if amr_tow_id != -1:
             self.AMR_TOW[amr_tow_id]['timestamp'].append(info_call.timestamp)
-            self.AMR_TOW[amr_tow_id]['pos'].append(self.AMR_TOW[amr_tow_id]['pos'][-1])
-            self.AMR_TOW[amr_tow_id]['vertex'].append(self.AMR_TOW[amr_tow_id]['vertex'][-1])
+            self.AMR_TOW[amr_tow_id]['pos'].append(self.AMR_TOW[amr_tow_id]['pos'][0])
+            self.AMR_TOW[amr_tow_id]['vertex'].append(self.AMR_TOW[amr_tow_id]['vertex'][0])
             self.AMR_TOW[amr_tow_id]['load'].append(1)
             self.AMR_TOW[amr_tow_id]['load_id'].append([rack_tow_id, -1])
 
@@ -322,7 +322,7 @@ class MapCloudlet:
                 if len(self.Path_AMR_LIFT[amr_id]) > 1:
                     compare_nodes.append(self.Path_AMR_LIFT[amr_id][0:2])
                     compare_nodes.append([self.Path_AMR_LIFT[amr_id][1], self.Path_AMR_LIFT[amr_id][0]])
-                if self.AMR_LIFT[amr_id]['vertex'][-1] in compare_nodes:
+                if self.AMR_LIFT[amr_id]['vertex'][0] in compare_nodes:
                     self.Path_AMR_LIFT[amr_id].pop(0)
 
                 # print("call update Nav Plan", amr_id, self.AMR_LIFT[amr_id]['vertex'][-1], compare_nodes)
@@ -334,7 +334,7 @@ class MapCloudlet:
                 if len(self.Path_AMR_TOW[amr_id]) > 1:
                     compare_nodes.append(self.Path_AMR_TOW[amr_id][0:2])
                     compare_nodes.append([self.Path_AMR_TOW[amr_id][1], self.Path_AMR_TOW[amr_id][0]])
-                if self.AMR_TOW[amr_id]['vertex'][-1] in compare_nodes:
+                if self.AMR_TOW[amr_id]['vertex'][0] in compare_nodes:
                     self.Path_AMR_TOW[amr_id].pop(0)
 
                 # print("call update Nav Plan", self.AMR_LIFT[amr_id]['vertex'][-1], compare_nodes)
@@ -345,12 +345,12 @@ class MapCloudlet:
         amr_ids = []
         collision_set = []
         for rid in self.AMR_TOW_IDs:
-            trajs[rid] = self.generate_traj_from_plan(self.AMR_TOW[rid]['pos'][-1], self.VEL, delT, T,
+            trajs[rid] = self.generate_traj_from_plan(self.AMR_TOW[rid]['pos'][0], self.VEL, delT, T,
                                                       self.Path_AMR_TOW[rid])
             # print("trajectory of ", rid, trajs[rid])
             amr_ids.append(rid)
         for rid in self.AMR_LIFT_IDs:
-            trajs[rid] = self.generate_traj_from_plan(self.AMR_LIFT[rid]['pos'][-1], self.VEL, delT, T,
+            trajs[rid] = self.generate_traj_from_plan(self.AMR_LIFT[rid]['pos'][0], self.VEL, delT, T,
                                                       self.Path_AMR_LIFT[rid])
             # print("trajectory of ", rid, trajs[rid])
             amr_ids.append(rid)
@@ -448,11 +448,11 @@ class MapCloudlet:
     # Translate internal data into GL format
     def get_RobotPos_GL(self, robot_id):
         if robot_id in self.AMR_TOW_IDs:
-            return '{RobotPose {} (vertex {} {})'.format(robot_id, self.AMR_TOW[robot_id]['vertex'][-1][0],
-                                                         self.AMR_TOW[robot_id]['vertex'][-1][1])
+            return '{RobotPose {} (vertex {} {})'.format(robot_id, self.AMR_TOW[robot_id]['vertex'][0][0],
+                                                         self.AMR_TOW[robot_id]['vertex'][0][1])
         else:
-            return '{RobotPose {} (vertex {} {})'.format(robot_id, self.AMR_LIFT[robot_id]['vertex'][-1][0],
-                                                         self.AMR_LIFT[robot_id]['vertex'][-1][1])
+            return '{RobotPose {} (vertex {} {})'.format(robot_id, self.AMR_LIFT[robot_id]['vertex'][0][0],
+                                                         self.AMR_LIFT[robot_id]['vertex'][0][1])
 
 
 if __name__ == "__main__":

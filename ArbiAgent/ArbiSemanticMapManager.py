@@ -66,7 +66,7 @@ class MapManagerDataSource(DataSource):
                               self.Rack_LIFT_init, self.Cargo_init, self.Door_init) # launch MC(MapCloudlet)
 
     def on_notify(self, content): # executed when the agent gets notification from ltm
-        print("[on Notify]" + content)
+        # print("[on Notify]" + content)
         time.sleep(0.05)
         gl_notify = GLFactory.new_gl_from_gl_string(content)
 
@@ -172,7 +172,7 @@ class MapManagerAgent(ArbiAgent):
         super().close()
 
     def on_notify(self, sender, notification): # executed when the agent gets notification
-        print("[on Notify]", notification)
+        # print("[on Notify]", notification)
         time.sleep(0.05)
         temp_gl = GLFactory.new_gl_from_gl_string(notification)
         if temp_gl.get_name() == "RobotPathPlan":  # Notify from NC
@@ -198,7 +198,7 @@ class MapManagerAgent(ArbiAgent):
         ''' CargoPose gl format: (CargoPose $cargo_id (vertex_id $v_id1 $v_id2) (on $robot_id $rack_id)) '''
 
         while True:
-            time.sleep(1)
+            time.sleep(0.5)
             temp_Cargo_info = self.ltm.MC.CARGO # get information of cargo in MC
             for id in temp_Cargo_info.keys():
                 time.sleep(0.05)
@@ -221,7 +221,7 @@ class MapManagerAgent(ArbiAgent):
                     )
                     self.notify(consumer, gl)
                     time.sleep(0.05)
-                    print("cargo pose notify : " + gl)
+                    # print("cargo pose notify : " + gl)
                     self.ltm.assert_fact(gl)
                 else:
                     pass
@@ -230,7 +230,7 @@ class MapManagerAgent(ArbiAgent):
         ''' RackPose gl format: (RackPose $rack_id (vertex_id $v_id1 $v_id2) (on $robot_id $cargo_id)) '''
 
         while True:
-            time.sleep(1)
+            time.sleep(0.5)
             temp_RackPose_LIFT_info = self.ltm.MC.RACK_LIFT # get information of LIFT Rack in MC
 
             for id in temp_RackPose_LIFT_info.keys():
@@ -252,7 +252,7 @@ class MapManagerAgent(ArbiAgent):
                         cargo_id=temp_RackPose_LIFT_cargo_id,
                         status=temp_RackPose_LIFT_status
                     )
-                    print("rack pose notify : " + gl)
+                    # print("rack pose notify : " + gl)
                     self.notify(consumer, gl)
                 else:
                     pass
@@ -308,7 +308,7 @@ class MapManagerAgent(ArbiAgent):
         ''' RobotPose gl format: (RobotAt $robot_id $v_id1 $v_id2)'''
 
         while True:
-            time.sleep(1)
+            time.sleep(0.5)
             temp_AMR_LIFT_info = self.ltm.MC.AMR_LIFT
             temp_AMR_TOW_info = self.ltm.MC.AMR_TOW
 
@@ -337,7 +337,7 @@ class MapManagerAgent(ArbiAgent):
 
     def Plan_update(self, robot_ids):
         while True:
-            time.sleep(1)
+            time.sleep(0.5)
             for robot_id in robot_ids:
                 self.ltm.MC.update_NAV_PLAN(robot_id)
 
@@ -345,7 +345,7 @@ class MapManagerAgent(ArbiAgent):
         ''' Collidable gl format: (Collidable $num (pair $robot_id $robot_id $time), …) '''
 
         while True:
-            time.sleep(1)
+            time.sleep(1.5)
             temp_Collidable_info = self.ltm.MC.detect_collision(10)
             temp_Collidable_num = len(temp_Collidable_info)
             if temp_Collidable_num:
@@ -363,6 +363,8 @@ class MapManagerAgent(ArbiAgent):
                     )
                 temp_notify = temp_notify + ")"
                 print(temp_notify.format(num=temp_Collidable_num))
+                print("CCCCCCCCCCCCCC", self.ltm.MC.Path_AMR_TOW["AMR_TOW1"])
+                print("CCCCCCCCCCCCCC", self.ltm.MC.Path_AMR_TOW["AMR_TOW2"])
                 self.notify(consumer, temp_notify.format(num=temp_Collidable_num))
 
     # def DoorStatus_notify(self, consumer):

@@ -1,4 +1,5 @@
 import sys
+import threading
 import time
 import os
 import pathlib
@@ -103,25 +104,33 @@ class NavigationControllerAgent(ArbiAgent):
             "AMR_TOW2": False
         }  # identify whether robot is moving
         self.avoid_flag = {
-            "AMR_LIFT": False,
+            "AMR_LIFT1": False,
             "AMR_LIFT2": False,
             "AMR_TOW1": False,
             "AMR_TOW2": False
         }  # identify whether robot is in avoiding plan
         self.collide_flag = {
-            "AMR_LIFT": False,
+            "AMR_LIFT1": False,
             "AMR_LIFT2": False,
             "AMR_TOW1": False,
             "AMR_TOW2": False
         }  # identify whether robot is in avoiding plan
 
-
-        self.threads = {
-            "AMR_LIFT": None,
-            "AMR_LIFT2": None,
-            "AMR_TOW1": None,
-            "AMR_TOW2": None
+        self.thread_flag = {
+            "AMR_LIFT1": False,
+            "AMR_LIFT2": False,
+            "AMR_TOW1": False,
+            "AMR_TOW2": False
         }
+
+        self.lock = {
+            "AMR_LIFT1": threading.Condition(),
+            "AMR_LIFT2": threading.Condition(),
+            "AMR_TOW1": threading.Condition(),
+            "AMR_TOW2": threading.Condition()
+        }
+
+        self.count = 0
 
     def on_start(self):  # executed when the agent initializes
         self.ltm = NavigationControllerDataSource(broker_url)  # ltm class
@@ -161,13 +170,20 @@ class NavigationControllerAgent(ArbiAgent):
             ''' robot_sendTM: robotID that has any change of its path and notify the information of robotID to robotBI '''
 
             if robot_id_BI:  # check whether robot_id_BI is empty
+                print("3Thread create by MultiRobotPose num : " + str(len(robot_id_BI)))
                 for robot_id in robot_id_BI:
                     self.SMM_notify(robot_id)  # # notify SMM of same control information
                     # if not self.avoid_flag[robot_id]:
                     if (not self.avoid_flag[robot_id]) and (not self.move_flag[robot_id]):
-                        print("[INFO] {RobotID} Control request by <POSE> Notification".format(RobotID=robot_id))
-                        Thread(target=self.Control_request, args=(robot_id, False, False,),
-                               daemon=True).start()  # control request of robotID
+                        print("[INFO] {RobotID} cancel move".format(RobotID=robot_id))
+                        self.cancel_move(robot_id)
+                        if self.thread_flag[robot_id]:
+                            self.thread_flag[robot_id] = False
+                            with self.lock[robot_id]:
+                                self.lock[robot_id].wait()
+                        print("[INFO] {RobotID} Control request by <COLLIDABLE> Notification [{num}]".format(RobotID=robot_id, num=self.count))
+                        Thread(target=self.Control_request, args=(robot_id, True, False, self.count), daemon=True).start()
+                        self.count = self.count + 1
 
         elif gl_name == "Collidable":  # "Collidable" update from SMM
             ''' Collidable gl format: (Collidable $num (pair $robot_id $robot_id $time), …) 
@@ -186,6 +202,15 @@ class NavigationControllerAgent(ArbiAgent):
                 for robot_id in robot_ids:
                     check += self.collide_flag[robot_id]
                 if check == 0:
+                    for robot_id in robot_ids:
+                        self.collide_flag[robot_id] = True
+                        print("[INFO] {RobotID} cancel move by collidable".format(RobotID=robot_id))
+                        self.cancel_move(robot_id)
+                        if self.thread_flag[robot_id]:
+                            self.thread_flag[robot_id] = False
+                            with self.lock[robot_id]:
+                                self.lock[robot_id].wait()
+
                     self.ltm.NC.update_start_goal_collision(robot_ids)  # update collidable robotIDs in NC
 
                     path_response = self.MultiRobotPath_query(robot_ids)  # query about not collidable path to MultiAgentPathFinder(MAPF)
@@ -194,10 +219,14 @@ class NavigationControllerAgent(ArbiAgent):
                     ''' path_response gl format: (MultiRobotPath (RobotPath $robot_id (path $v_id1 $v_id2 $v_id3, ...)), …) '''
 
                     self.MultiRobotPath_update(path_response_gl)  # update path of robot in NC
+                    print("4Thread create by collidable num : " + str(len(robot_ids)))
                     for robot_id in robot_ids:
                         self.SMM_notify(robot_id)  # # notify SMM of same control information
-                        print("[INFO] {RobotID} Control request by <COLLIDABLE> Notification".format(RobotID=robot_id))
-                        Thread(target=self.Control_request, args=(robot_id, True, False,), daemon=True).start()
+                        # print("[INFO] {RobotID} cancel move".format(RobotID=robot_id))
+                        # self.cancel_move(robot_id)
+                        print("[INFO] {RobotID} Control request by <COLLIDABLE> Notification [{num}]".format(RobotID=robot_id, num=self.count))
+                        Thread(target=self.Control_request, args=(robot_id, True, False, self.count), daemon=True).start()
+                        self.count = self.count + 1
 
     def on_request(self, sender, request):  # executed when the agent gets request
         print("[on Request] " + request)
@@ -218,12 +247,12 @@ class NavigationControllerAgent(ArbiAgent):
             self.real_goal[robot_id] = real_goal
 
             actual_goal_gl = "(context (NavigationVertex {realGoal} $vertex))".format(realGoal=real_goal)
-            print("[{action_id}][Query1] Query to CM about vertex {realGoal}".format(action_id=action_id, realGoal=real_goal))
+            # print("[{action_id}][Query1] Query to CM about vertex {realGoal}".format(action_id=action_id, realGoal=real_goal))
             actual_goal_response = self.query(self.CM_name, actual_goal_gl)
             actual_goal_response_gl = GLFactory.new_gl_from_gl_string(actual_goal_response)
-            print("[{action_id}][Query2] response from CM : {response_gl}".format(action_id=action_id, response_gl=str(actual_goal_response_gl)))
+            # print("[{action_id}][Query2] response from CM : {response_gl}".format(action_id=action_id, response_gl=str(actual_goal_response_gl)))
             actual_goal = actual_goal_response_gl.get_expression(0).as_generalized_list().get_expression(1).as_value().int_value()
-            print("[{action_id}] actual goal : {actual_goal}".format(action_id=action_id, actual_goal=actual_goal))
+            # print("[{action_id}] actual goal : {actual_goal}".format(action_id=action_id, actual_goal=actual_goal))
             self.actual_goal[robot_id] = actual_goal
 
             robot_goal[robot_id] = actual_goal  # robotID-goalVertex pair
@@ -232,29 +261,49 @@ class NavigationControllerAgent(ArbiAgent):
                 robot_id_BI: robotID that has any change of its path and notify the information of robotID to robotBI '''
             
             if robot_id_BI:  # check whether robot_id_BI is empty
+                print("1Thread create num : " + str(len(robot_id_BI)))
                 for robot_id in robot_id_BI:
                     self.SMM_notify(robot_id)  # # notify SMM of same control information
-                    print("[{action_id}][INFO3] {RobotID} Control request by <Move> Request".format(action_id=action_id, RobotID=robot_id))
-                    Thread(target=self.Control_request, args=(robot_id, False, True,), daemon=True).start()  # control request of robotID
+                    print("[{action_id}][INFO2] {RobotID} cancel move".format(action_id=action_id, RobotID=robot_id))
+                    self.cancel_move(robot_id)
+                    print("[{action_id}][INFO2] {RobotID} cancel move finish".format(action_id=action_id, RobotID=robot_id))
+                    print("[{action_id}][INFO2] {RobotID} {flag}".format(action_id=action_id, RobotID=robot_id, flag=str(self.thread_flag[robot_id])))
+                    if self.thread_flag[robot_id]:
+                        self.thread_flag[robot_id] = False
+                        with self.lock[robot_id]:
+                            print("[{action_id}][INFO2] {RobotID} waiting thread".format(action_id=action_id, RobotID=robot_id))
+                            self.lock[robot_id].wait()
+                    print("[{action_id}][INFO2] {RobotID} Control request by <Move> Request [{num}]".format(action_id=action_id, RobotID=robot_id, num=self.count))
+                    Thread(target=self.Control_request, args=(robot_id, False, True, self.count, ), daemon=True).start()  # control request of robotID
+                    self.count = self.count + 1
 
             if robot_id_replan:  # check whether robot_id_replan is empty
                 path_response = self.MultiRobotPath_query(robot_id_replan)  # query about not collidable path to MultiAgentPathFinder(MAPF)
                 path_response_gl = GLFactory.new_gl_from_gl_string(path_response)
-                print("[{action_id}] before update".format(action_id=action_id))
                 ''' path_response_gl gl format: (MultiRobotPath (RobotPath $robot_id (path $v_id1 $v_id2 $v_id3, ...)), …) '''
 
+                print("before update")
                 robot_ids = self.MultiRobotPath_update(path_response_gl)  # update path of robot in NC
-                print("[{action_id}] after update".format(action_id=action_id))
+                print("after update")
 
-                for robot_id in robot_ids:
-                    print("[{action_id}] tmp7".format(action_id=action_id))
+                print("2Thread create num : " + str(len(robot_ids)))
+                for robot_id in robot_id_replan:
                     self.SMM_notify(robot_id)  # # notify SMM of same control information
-                    print("[{action_id}][INFO4] {RobotID} Control request by <Move> Request".format(action_id=action_id, RobotID=robot_id))
-                    Thread(target=self.Control_request, args=(robot_id, False, True,), daemon=True).start()  # control request of robotID
+                    print("[{action_id}][INFO3] {RobotID} cancel move".format(action_id=action_id, RobotID=robot_id))
+                    self.cancel_move(robot_id)
+                    print("[{action_id}][INFO3] {RobotID} cancel move finish".format(action_id=action_id, RobotID=robot_id))
+                    print("[{action_id}][INFO3] {RobotID} {flag}".format(action_id=action_id, RobotID=robot_id, flag=str(self.thread_flag[robot_id])))
+                    if self.thread_flag[robot_id]:
+                        self.thread_flag[robot_id] = False
+                        with self.lock[robot_id]:
+                            print("[{action_id}][INFO3] {RobotID} waiting thread".format(action_id=action_id, RobotID=robot_id))
+                            self.lock[robot_id].wait()
+                            print("[{action_id}][INFO3] {RobotID} waiting finish".format(action_id=action_id, RobotID=robot_id))
+                    print("[{action_id}][INFO3] {RobotID} Control request by <Move> Request [{num}]".format(action_id=action_id, RobotID=robot_id, num=self.count))
+                    Thread(target=self.Control_request, args=(robot_id, False, True, self.count, ), daemon=True).start()  # control request of robotID
+                    self.count = self.count + 1
 
             goal_request_result = "(ok)"  # response to robotTM that request is successful
-            print('[{action_id}][on Request5] send (ok) to ' + str(sender) + " about request " + str(request))
-
             print("[{action_id}][on Request6] Response of request of {RobotID}: {Result}".format(action_id=action_id, RobotID=requested_robot_id, Result=goal_request_result))
 
             return goal_request_result
@@ -262,27 +311,8 @@ class NavigationControllerAgent(ArbiAgent):
             print("what?", str(temp_gl))
             return "(fail)"
 
-    def Control_request(self, robot_id, collide, replan):
-        print("111111111111111", self.ltm.NC.robotTM_set[robot_id])
-        ''' if robot is in stationary state, output from MAPF path is same with current vertex
-            e.g. "AMR_TOW1" : in stationary state, no plan to move
-                -> self.cur_robot_pose["AMR_TOW1"][0] == self.cur_robot_pose["AMR_TOW1"][1]
-                -> len(self.ltm.NC.robotTM[robot_id][0]) == 1
-            => no control is needed '''
-        
-        ''' self.ltm.NC.robotTM[robotID]: current path of robotID '''
-    
-        if collide:
-            self.collide_flag[robot_id] = True
-            # counterpart_check = {0: 1, 1: 0, 2: 3, 3: 2}
-            # robot_index = self.AMR_IDs.index(robot_id)
-            # c_robot_id = self.AMR_IDs[counterpart_check[robot_index]]  # get robotID of counterpart robot
-            # self.collide_flag[c_robot_id] = True
-            time.sleep(1)
-        elif replan:
-            time.sleep(1)
-
-        if (len(self.ltm.NC.robotTM[robot_id]) == 1):  # check whether robot is stationary
+    def cancel_move(self, robot_id):
+        if len(self.ltm.NC.robotTM[robot_id]) == 1:  # check whether robot is stationary
             stationary_check = (self.cur_robot_pose[robot_id][0] == self.cur_robot_pose[robot_id][1] ==
                                 self.ltm.NC.robotTM[robot_id][0])  # True if robot is stationary and will be stationary
         else:
@@ -303,64 +333,20 @@ class NavigationControllerAgent(ArbiAgent):
                             "AMR_TOW1": "\"7\""
                             "AMR_TOW2": "\"8\""
                         cancelMove gl format: (cancelMove (actionID $actionID)) '''
-                        
-                    while True:
-                        temp_Cancel_gl = "(cancelMove (actionID {actionID}))"
-                        Cancel_gl = temp_Cancel_gl.format(actionID=self.BI_actionID[robot_id][1])  # Cancel actionID
-                        self.move_flag[robot_id] = False  # update moving state of robot
-                        print("[Request] Request {RobotID} to Cancel Path".format(RobotID=robot_id))
-                        cancel_response = self.request(self.BI_name[robot_id], Cancel_gl)  # get response of Cancel request
-                        cancel_response_gl = GLFactory.new_gl_from_gl_string(cancel_response)
-                        if cancel_response_gl.get_name() == "fail":
-                            print("[Request] Request {RobotID} to Cancel Path: FAIL".format(RobotID=robot_id))
-                            time.sleep(1)
-                            continue
-                        else:
-                            result = cancel_response_gl.get_expression(1).as_value().string_value()  # "success" if Cancel request is done
-                            print("[Request] Request {RobotID} to Cancel Path: {Result}".format(RobotID=robot_id, Result=result))
-                            time.sleep(0.5)
-                            break
 
-                ### Control Request to move ###
-                ''' Move actionID:
-                        "AMR_LIFT1": "\"1\""
-                        "AMR_LIFT2": "\"2\""
-                        "AMR_TOW1": "\"3\""
-                        "AMR_TOW2": "\"4\""
-                    move gl format: (move (actionID $actionID) $path) '''
-                
-                self.move_flag[robot_id] = True  # update moving state of robot
-                while True:
-                    time.sleep(1)
-                    print("[INFO] {RobotID} is waiting for Path Update".format(RobotID=robot_id))
-                    if self.ltm.NC.robotTM[robot_id]:
-                        robot_path = copy.copy(self.ltm.NC.robotTM[robot_id])
-                        print("[INFO] {RobotID} got new path".format(RobotID=robot_id))
-                        break
-
-                temp_Move_gl = "(move (actionID {actionID}) {path})"
-                path_gl = self.path_gl_generator(robot_path, robot_id)  # convert path list to path gl
-                Move_gl = temp_Move_gl.format(actionID=self.BI_actionID[robot_id][0], path=path_gl)
-                print("[Request] Request {RobotID} to go {Path}".format(RobotID=robot_id, Path=str(path_gl)))
-
-                fail_check = 0
-                while True:
-
-                    print("1111111111111111111111111111111111111111")
-                    move_response = self.request(self.BI_name[robot_id],Move_gl)  # request move control to robotBI, get response of request
-                    move_response_gl = GLFactory.new_gl_from_gl_string(move_response)
-                    if move_response_gl.get_name() == "fail":
-                        print("[Request] Request {RobotID} to go {Path}: FAIL".format(RobotID=robot_id, Path=str(path_gl)))
-                        fail_check += 1
-                        time.sleep(1)
-                        if fail_check > 1:
-                            return
-                        continue
+                    temp_Cancel_gl = "(cancelMove (actionID {actionID}))"
+                    Cancel_gl = temp_Cancel_gl.format(actionID=self.BI_actionID[robot_id][1])  # Cancel actionID
+                    self.move_flag[robot_id] = False  # update moving state of robot
+                    print("[Request CancelMove1]\t{RobotID}".format(RobotID=robot_id))
+                    cancel_response = self.request(self.BI_name[robot_id],
+                                                   Cancel_gl)  # get response of Cancel request
+                    cancel_response_gl = GLFactory.new_gl_from_gl_string(cancel_response)
+                    if cancel_response_gl.get_name() == "fail":
+                        print("[Response CancelMove1]\t{RobotID}: FAIL".format(RobotID=robot_id))
                     else:
-                        result = move_response_gl.get_expression(1).as_value().string_value()  # "success" if request is done, "(fail)"" if request can't be handled
-                        print("[Request] Request {RobotID} to go {Path}: {Result}".format(RobotID=robot_id, Path=str(path_gl), Result=str(result)))
-                        break
-
+                        result = cancel_response_gl.get_expression(
+                            1).as_value().string_value()  # "success" if Cancel request is done
+                        print("[Response CancelMove1]\t{RobotID}: {Result}".format(RobotID=robot_id, Result=result))
             elif len(self.ltm.NC.robotTM_set[robot_id]) >= 2:  # split path (avoiding path)
                 self.avoid_flag[robot_id] = True  # update avoiding state of robot
                 counterpart_check = {0: 1, 1: 0, 2: 3, 3: 2}
@@ -368,8 +354,6 @@ class NavigationControllerAgent(ArbiAgent):
                 c_robot_id = self.AMR_IDs[counterpart_check[robot_index]]  # get robotID of counterpart robot
                 self.avoid_flag[c_robot_id] = True
 
-                robotTM_set = copy.copy(self.ltm.NC.robotTM_set)  # get path set
-                robotTM_scond = copy.copy(self.ltm.NC.robotTM_scond)  # get start condition of robot
                 ''' self.ltm.NC.robotTM_scond: start condition of split path
                     e.g. AMR_LIFT1 is avoiding robot and AMR_LIFT2 is counterpart robot
                          self.ltm.NC.robotTM_set["AMR_LIFT1"] == [[1, 2, 3], [4, 5, 6, 7]]
@@ -379,86 +363,249 @@ class NavigationControllerAgent(ArbiAgent):
                     self.ltm.NC.robotTM_scond["AMR_LIFT1"]: start condition of "AMR_LIFT1"(avoidingRobot)
                     -> no condition of 0th path
                     -> [["AMR_LIFT2", [0, 1]]] condition of 1th path which means start after "AMR_LIFT2" passes 1th element(5) in 0th path([4, 5, 6, 7, 8, 9]) '''
-                
+
                 ### Cancel current control request if robot is moving ###
                 if self.move_flag[robot_id]:  # check whether robot is moving
-                    while True:
-                        temp_Cancel_gl = "(cancelMove (actionID {actionID}))"
-                        Cancel_gl = temp_Cancel_gl.format(actionID=self.BI_actionID[robot_id][1])  # Cancel actionID
-                        self.move_flag[robot_id] = False  # update moving state of robot
-                        print("[Request] Request {RobotID} to Cancel Path".format(RobotID=robot_id))
-                        cancel_response = self.request(self.BI_name[robot_id], Cancel_gl)  # get response of Cancel request
-                        cancel_response_gl = GLFactory.new_gl_from_gl_string(cancel_response)
-                        if cancel_response_gl.get_name() == "fail":
-                            print("[Request] Request {RobotID} to Cancel Path: FAIL".format(RobotID=robot_id))
-                            time.sleep(1)
-                            continue
-                        else:
-                            result = cancel_response_gl.get_expression(1).as_value().string_value()  # "success" if Cancel request is done
-                            print("[Request] Request {RobotID} to Cancel Path: {Result}".format(RobotID=robot_id, Result=result))
-                            time.sleep(0.5)
-                            break
+                    temp_Cancel_gl = "(cancelMove (actionID {actionID}))"
+                    Cancel_gl = temp_Cancel_gl.format(actionID=self.BI_actionID[robot_id][1])  # Cancel actionID
+                    self.move_flag[robot_id] = False  # update moving state of robot
+                    print("[Request CancelMove2]\t{RobotID}".format(RobotID=robot_id))
+                    cancel_response = self.request(self.BI_name[robot_id],
+                                                   Cancel_gl)  # get response of Cancel request
+                    cancel_response_gl = GLFactory.new_gl_from_gl_string(cancel_response)
+                    if cancel_response_gl.get_name() == "fail":
+                        print("[Response CancelMove2]\t{RobotID}: FAIL".format(RobotID=robot_id))
+                    else:
+                        result = cancel_response_gl.get_expression(1).as_value().string_value()  # "success" if Cancel request is done
+                        print("[Response CancelMove2]\t{RobotID}: {Result}".format(RobotID=robot_id, Result=result))
 
-                ### Control request to move ###
-                for path_idx in range(len(robotTM_set[robot_id])):  # consider path set
-                    if robotTM_scond[robot_id][path_idx]:  # check whether current path has any start condition
-                        wait_flag = True
-                        while wait_flag:
-                            time.sleep(1)
-                            for cond in robotTM_scond[robot_id][path_idx]:
-                                if self.ltm.NC.PlanExecutedIdx[cond[0]][0] < cond[1][0] or \
-                                        self.ltm.NC.PlanExecutedIdx[cond[0]][1] < cond[1][1]:
-                                    wait_flag = True
-                                else:
-                                    wait_flag = False
-                                    print("[INFO] Start Condition of {RobotID} is Satisfied".format(RobotID=robot_id))
-                                    break
+    def Control_request(self, robot_id, collide, replan, count):
+        c = "[" + str(count) + "]"
+        self.count = self.count + 1
+        print(c + "[Info] Control request start : " + robot_id)
+        self.thread_flag[robot_id] = True
 
+        # print("111111111111111", self.ltm.NC.robotTM_set[robot_id])
+        ''' if robot is in stationary state, output from MAPF path is same with current vertex
+            e.g. "AMR_TOW1" : in stationary state, no plan to move
+                -> self.cur_robot_pose["AMR_TOW1"][0] == self.cur_robot_pose["AMR_TOW1"][1]
+                -> len(self.ltm.NC.robotTM[robot_id][0]) == 1
+            => no control is needed '''
+        
+        ''' self.ltm.NC.robotTM[robotID]: current path of robotID '''
+    
+        if collide:
+            self.collide_flag[robot_id] = True
+            print(111111111111111111111111, robot_id, "COLLIDABLE")
+            # counterpart_check = {0: 1, 1: 0, 2: 3, 3: 2}
+            # robot_index = self.AMR_IDs.index(robot_id)
+            # c_robot_id = self.AMR_IDs[counterpart_check[robot_index]]  # get robotID of counterpart robot
+            # self.collide_flag[c_robot_id] = True
+            # time.sleep(1)
+        elif replan:
+            time.sleep(1)
+
+        while self.thread_flag[robot_id]:
+            print(c + "waiting")
+            time.sleep(0.5)
+            if self.ltm.NC.robotTM[robot_id]:
+                print(c + "got path")
+                break
+            else:
+                continue
+
+        if self.thread_flag[robot_id]:
+            if (len(self.ltm.NC.robotTM[robot_id]) == 1):  # check whether robot is stationary
+                stationary_check = (self.cur_robot_pose[robot_id][0] == self.cur_robot_pose[robot_id][1]) and (self.actual_goal[robot_id] == -1)  # True if robot is stationary and will be stationary
+            else:
+                stationary_check = False
+
+            print(c + str(self.ltm.NC.robotTM[robot_id]))
+            print(c + str(len(self.ltm.NC.robotTM_set[robot_id])))
+            print(c + str(self.ltm.NC.robotTM_set[robot_id]))
+            print(c + "stationary_check " + str(stationary_check))
+
+            if self.ltm.NC.robotTM[robot_id] and (not stationary_check):  # check whether robot has path and not stationary
+                ''' if robot is avoiding against counterpart robot, path of the robot is split
+                    e.g. self.ltm.NC.robotTM_set[avoidingRobotID] == [[path], [path]]
+                         self.ltm.NC.robotTM_set[counterpartRobotID] == [[path]] '''
+
+                if len(self.ltm.NC.robotTM_set[robot_id]) == 1:  # not split path (not avoiding path)
+                    ### Cancel current control request if robot is moving ###
+                    # if self.move_flag[robot_id]:  # check whether robot is moving
+                    #     ''' If robot is moving now, current path should be canceled.
+                    #         Cancel actionID:
+                    #             "AMR_LIFT1": "\"5\""
+                    #             "AMR_LIFT2": "\"6\""
+                    #             "AMR_TOW1": "\"7\""
+                    #             "AMR_TOW2": "\"8\""
+                    #         cancelMove gl format: (cancelMove (actionID $actionID)) '''
+                    #
+                    #     while True:
+                    #         temp_Cancel_gl = "(cancelMove (actionID {actionID}))"
+                    #         Cancel_gl = temp_Cancel_gl.format(actionID=self.BI_actionID[robot_id][1])  # Cancel actionID
+                    #         self.move_flag[robot_id] = False  # update moving state of robot
+                    #         print(c + "[Request CancelMove1]\t{RobotID}".format(RobotID=robot_id))
+                    #         cancel_response = self.request(self.BI_name[robot_id], Cancel_gl)  # get response of Cancel request
+                    #         cancel_response_gl = GLFactory.new_gl_from_gl_string(cancel_response)
+                    #         if cancel_response_gl.get_name() == "fail":
+                    #             print(c + "[Response CancelMove1]\t{RobotID}: FAIL".format(RobotID=robot_id))
+                    #             time.sleep(1)
+                    #             continue
+                    #         else:
+                    #             result = cancel_response_gl.get_expression(1).as_value().string_value()  # "success" if Cancel request is done
+                    #             print(c + "[Response CancelMove1]\t{RobotID}: {Result}".format(RobotID=robot_id, Result=result))
+                    #             time.sleep(0.5)
+                    #             break
+
+                    ### Control Request to move ###
                     ''' Move actionID:
                             "AMR_LIFT1": "\"1\""
                             "AMR_LIFT2": "\"2\""
                             "AMR_TOW1": "\"3\""
                             "AMR_TOW2": "\"4\""
                         move gl format: (move (actionID $actionID) $path) '''
+
                     self.move_flag[robot_id] = True  # update moving state of robot
-                    while True:
+                    while self.thread_flag[robot_id]:
                         time.sleep(1)
-                        print("[INFO] {RobotID} is waiting for Path Update".format(RobotID=robot_id))
+                        # print("[INFO] {RobotID} is waiting for Path Update".format(RobotID=robot_id))
                         if self.ltm.NC.robotTM[robot_id]:
-                            robot_path = robotTM_set[robot_id][path_idx]  # get current path of path set
-                            print("[INFO] {RobotID} got new path".format(RobotID=robot_id))
+                            robot_path = copy.copy(self.ltm.NC.robotTM[robot_id])
+                            # print("[INFO] {RobotID} got new path".format(RobotID=robot_id))
                             break
 
-                    temp_Move_gl = "(move (actionID {actionID}) {path})"
-                    path_gl = self.path_gl_generator(robot_path, robot_id)  # convert path list to path gl
-                    Move_gl = temp_Move_gl.format(actionID=self.BI_actionID[robot_id][0], path=path_gl)
-                    print("[Request] Request {RobotID} to go {Path}".format(RobotID=robot_id, Path=str(path_gl)))
+                    if self.thread_flag[robot_id]:
+                        temp_Move_gl = "(move (actionID {actionID}) {path})"
+                        path_gl = self.path_gl_generator(robot_path, robot_id)  # convert path list to path gl
+                        Move_gl = temp_Move_gl.format(actionID=self.BI_actionID[robot_id][0], path=path_gl)
 
-                    fail_check = 1
-                    while True:
-                        move_response = self.request(self.BI_name[robot_id], Move_gl)  # request move control to robotBI, get response of request
-                        move_response_gl = GLFactory.new_gl_from_gl_string(move_response)
-                        if move_response_gl.get_name() == "fail":
-                            print("[Request] Request {RobotID} to go {Path}: FAIL".format(RobotID=robot_id, Path=str(path_gl)))
-                            fail_check += 1
+                        self.SMM_notify(robot_id)
+                        while self.thread_flag[robot_id]:
+                            print(c + "[Request Move1]\t\t{RobotID}\t{Path}".format(RobotID=robot_id, Path=str(path_gl)))
+                            move_response = self.request(self.BI_name[robot_id],Move_gl)  # request move control to robotBI, get response of request
+                            print(c + "[response Move1]\t\t{RobotID}\t{response}".format(RobotID=robot_id, response=str(move_response)))
+                            move_response_gl = GLFactory.new_gl_from_gl_string(move_response)
+                            if move_response_gl.get_name() == "fail":
+                                time.sleep(1)
+                            else:
+                                result = move_response_gl.get_expression(1).as_value().string_value()  # "success" if request is done, "(fail)"" if request can't be handled
+                                print(c + "[response Move1]\t\t{RobotID}\t{Path}: {Result}".format(RobotID=robot_id, Path=str(path_gl), Result=str(result)))
+                                break
+
+                elif len(self.ltm.NC.robotTM_set[robot_id]) >= 2:  # split path (avoiding path)
+                    self.avoid_flag[robot_id] = True  # update avoiding state of robot
+                    counterpart_check = {0: 1, 1: 0, 2: 3, 3: 2}
+                    robot_index = self.AMR_IDs.index(robot_id)
+                    c_robot_id = self.AMR_IDs[counterpart_check[robot_index]]  # get robotID of counterpart robot
+                    self.avoid_flag[c_robot_id] = True
+
+                    robotTM_set = copy.copy(self.ltm.NC.robotTM_set)  # get path set
+                    robotTM_scond = copy.copy(self.ltm.NC.robotTM_scond)  # get start condition of robot
+                    ''' self.ltm.NC.robotTM_scond: start condition of split path
+                        e.g. AMR_LIFT1 is avoiding robot and AMR_LIFT2 is counterpart robot
+                             self.ltm.NC.robotTM_set["AMR_LIFT1"] == [[1, 2, 3], [4, 5, 6, 7]]
+                             self.ltm.NC.robotTM_set["AMR_LIFT2"] == [4, 5, 6, 7, 8, 9]
+                             self.ltm.NC.robotTM_scond["AMR_LIFT1"] == [[], [["AMR_LIFT2", [0, 1]]]]
+    
+                        self.ltm.NC.robotTM_scond["AMR_LIFT1"]: start condition of "AMR_LIFT1"(avoidingRobot)
+                        -> no condition of 0th path
+                        -> [["AMR_LIFT2", [0, 1]]] condition of 1th path which means start after "AMR_LIFT2" passes 1th element(5) in 0th path([4, 5, 6, 7, 8, 9]) '''
+
+                    ### Cancel current control request if robot is moving ###
+                    # if self.move_flag[robot_id]:  # check whether robot is moving
+                    #     while True:
+                    #         temp_Cancel_gl = "(cancelMove (actionID {actionID}))"
+                    #         Cancel_gl = temp_Cancel_gl.format(actionID=self.BI_actionID[robot_id][1])  # Cancel actionID
+                    #         self.move_flag[robot_id] = False  # update moving state of robot
+                    #         print(c + "[Request CancelMove2]\t{RobotID}".format(RobotID=robot_id))
+                    #         cancel_response = self.request(self.BI_name[robot_id], Cancel_gl)  # get response of Cancel request
+                    #         cancel_response_gl = GLFactory.new_gl_from_gl_string(cancel_response)
+                    #         if cancel_response_gl.get_name() == "fail":
+                    #             print(c + "[Response CancelMove2]\t{RobotID}: FAIL".format(RobotID=robot_id))
+                    #             time.sleep(1)
+                    #             continue
+                    #         else:
+                    #             result = cancel_response_gl.get_expression(1).as_value().string_value()  # "success" if Cancel request is done
+                    #             print(c + "[Response CancelMove2]\t{RobotID}: {Result}".format(RobotID=robot_id, Result=result))
+                    #             time.sleep(0.5)
+                    #             break
+
+                    ### Control request to move ###
+                    print(c + "robot tm set : " + str(robotTM_set[robot_id]))
+                    for path_idx in range(len(robotTM_set[robot_id])):  # consider path set
+                        print(c + "start for")
+                        print(c + "robotTM_scond : " + str(robotTM_scond))
+                        print(c + "robotTM_scond[robot_id][path_idx] : " + str(robotTM_scond[robot_id][path_idx]))
+                        if robotTM_scond[robot_id][path_idx]:  # check whether current path has any start condition
+                            wait_flag = True
+                            while wait_flag:
+                                time.sleep(1)
+                                print(c + "wait flag")
+                                for cond in robotTM_scond[robot_id][path_idx]:
+                                    if self.ltm.NC.PlanExecutedIdx[cond[0]][0] < cond[1][0] or \
+                                            self.ltm.NC.PlanExecutedIdx[cond[0]][1] < cond[1][1]:
+                                        wait_flag = True
+                                    else:
+                                        wait_flag = False
+                                        # print("[INFO] Start Condition of {RobotID} is Satisfied".format(RobotID=robot_id))
+                                        break
+
+                        ''' Move actionID:
+                                "AMR_LIFT1": "\"1\""
+                                "AMR_LIFT2": "\"2\""
+                                "AMR_TOW1": "\"3\""
+                                "AMR_TOW2": "\"4\""
+                            move gl format: (move (actionID $actionID) $path) '''
+                        self.move_flag[robot_id] = True  # update moving state of robot
+                        print(c + "middle flag : " + str(self.thread_flag[robot_id]))
+                        print(c + "self.ltm.NC.robotTM : " + str(self.ltm.NC.robotTM))
+                        print(c + "self.ltm.NC.robotTM[robot_id] : " + str(self.ltm.NC.robotTM[robot_id]))
+                        print(c + "robotTM_set[robot_id][path_idx] : " + str(robotTM_set[robot_id][path_idx]))
+                        print(c + "while start")
+                        while self.thread_flag[robot_id]:
                             time.sleep(1)
-                            if fail_check > 1:
-                                return
-                            continue
-                        else:
-                            result = move_response_gl.get_expression(1).as_value().string_value()  # "success" if request is done, "(fail)"" if request can't be handled
-                            print("[Request] Request {RobotID} to go {Path}: {Result})".format(RobotID=robot_id, Path=str(path_gl), Result=str(result)))
-                            break
+                            # print("[INFO] {RobotID} is waiting for Path Update".format(RobotID=robot_id))
+                            if self.ltm.NC.robotTM[robot_id]:
+                                robot_path = robotTM_set[robot_id][path_idx]  # get current path of path set
+                                # print("[INFO] {RobotID} got new path".format(RobotID=robot_id))
+                                break
+                        print(c + "while finish : " + str(self.thread_flag[robot_id]))
+                        print(c + "robot_path : " + str(robot_path))
 
-                self.avoid_flag[robot_id] = False  # update avoiding state of robot
-                self.avoid_flag[c_robot_id] = False # update avoiding state of robot
+                        if self.thread_flag[robot_id]:
+                            temp_Move_gl = "(move (actionID {actionID}) {path})"
+                            path_gl = self.path_gl_generator(robot_path, robot_id)  # convert path list to path gl
+                            Move_gl = temp_Move_gl.format(actionID=self.BI_actionID[robot_id][0], path=path_gl)
+                            self.SMM_notify(robot_id)
 
-        if collide:
-            self.collide_flag[robot_id] = False
-            counterpart_check = {0: 1, 1: 0, 2: 3, 3: 2}
-            robot_index = self.AMR_IDs.index(robot_id)
-            c_robot_id = self.AMR_IDs[counterpart_check[robot_index]]  # get robotID of counterpart robot
-            self.collide_flag[c_robot_id] = False
+                            while self.thread_flag[robot_id]:
+                                print(c + "[Request Move2]\t\t{RobotID}\t{Path}".format(RobotID=robot_id, Path=str(path_gl)))
+                                move_response = self.request(self.BI_name[robot_id], Move_gl)  # request move control to robotBI, get response of request                                    print(c + "[response Move1]\t\t{RobotID}\t{response}".format(RobotID=robot_id, response=str(move_response)))
+                                print(c + "[response Move2]\t\t{RobotID}\t{response}".format(RobotID=robot_id, response=str(move_response)))
+                                move_response_gl = GLFactory.new_gl_from_gl_string(move_response)
+                                if move_response_gl.get_name() == "fail":
+                                    time.sleep(1)
+                                else:
+                                    result = move_response_gl.get_expression(1).as_value().string_value()  # "success" if request is done, "(fail)"" if request can't be handled
+                                    print(c + "[Response Move2]\t\t{RobotID}\t{Path}: {Result}".format(RobotID=robot_id, Path=str(path_gl), Result=str(result)))
+                                    print(c + "flag : " + str(self.thread_flag[robot_id]))
+                                    print(c + "robot tm set : " + str(robotTM_set[robot_id]))
+                                    break
+                        print(c + "end for")
+                    self.avoid_flag[robot_id] = False  # update avoiding state of robot
+                    self.avoid_flag[c_robot_id] = False # update avoiding state of robot
+
+            if collide and self.thread_flag[robot_id]:
+                self.collide_flag[robot_id] = False
+                counterpart_check = {0: 1, 1: 0, 2: 3, 3: 2}
+                robot_index = self.AMR_IDs.index(robot_id)
+                c_robot_id = self.AMR_IDs[counterpart_check[robot_index]]  # get robotID of counterpart robot
+                self.collide_flag[c_robot_id] = False
+        self.thread_flag[robot_id] = False
+        with self.lock[robot_id]:
+            self.lock[robot_id].notify()
+        print(c + "[Info] Control request finish " + str(robot_id))
 
     def SMM_notify(self, robot_id):  # notify SMM of control information
         ''' RobotPathPlan gl format: (RobotPathPlan $robot_id $goal (path $v_id1 $v_id2 ….)) '''
@@ -467,10 +614,11 @@ class NavigationControllerAgent(ArbiAgent):
             robot_path = copy.copy(self.ltm.NC.robotTM[robot_id])
             path_gl = self.path_gl_generator(robot_path, robot_id)  # convert path list to path gl
             SMM_gl = temp_SMM_gl.format(robot_id=robot_id, goal=self.actual_goal[robot_id], path=path_gl)
-            print("[Notify] Notify Path and Goal of {RobotID} to SMM".format(RobotID=robot_id))
+            # print("[Notify] Notify Path and Goal of {RobotID} to SMM".format(RobotID=robot_id))
             self.notify(self.SMM_name, SMM_gl)  # notify SMM
         else:
-            print("[INFO] {RobotID} has no path".format(RobotID=robot_id))
+            # print("[INFO] {RobotID} has no path".format(RobotID=robot_id))
+            pass
 
     def path_gl_generator(self, path, robot_id):  # convert path list to path gl
         ''' path gl format: (path $v_id1 $v_id2 ….) '''
@@ -497,8 +645,7 @@ class NavigationControllerAgent(ArbiAgent):
                     goal_result_gl = "(MoveResult (actionID \"{ActionID}\") \"{Result}\")".format(
                         ActionID=self.goal_actionID[robot_id],
                         Result="success")
-                    print("[INFO] \"{RobotID}\" to \"{GoalID}\": success".format(RobotID=robot_id,
-                                                                                 GoalID=self.actual_goal[robot_id]))
+                    # print("[INFO] \"{RobotID}\" to \"{GoalID}\": success".format(RobotID=robot_id, GoalID=self.actual_goal[robot_id]))
                     self.send(self.TM_name[robot_id], goal_result_gl)  # send result to robotTM
                     self.actual_goal[robot_id] = self.ltm.NC.robotGoal[robot_id]
                     self.real_goal[robot_id] = self.ltm.NC.robotGoal[robot_id]
@@ -507,7 +654,6 @@ class NavigationControllerAgent(ArbiAgent):
 
     def MultiRobotPath_update(self, response_gl):  # update paths of robots in NC
         ''' MultiRobotPath gl format: (MultiRobotPath (RobotPath $robot_id (path $v_id1 $v_id2 $v_id3, ...)), …) '''
-        print("start update")
         multipaths = dict()  # {robotoID: path}
         robot_num = response_gl.get_expression_size()  # get number of robots
         robot_pose = {}  # {robotID: [vertex, vertex]}
@@ -526,14 +672,9 @@ class NavigationControllerAgent(ArbiAgent):
             multipaths[robot_id] = path
             robot_pose[robot_id] = copy.copy(self.cur_robot_pose[robot_id])  # get current pose of robot
 
-        print("before plan : " + str(multipaths))
         self.ltm.NC.get_multipath_plan(multipaths)  # update path in NC
-        print("after plan : " + str(multipaths))
-        print("before update TM : " + str(robot_pose))
         self.ltm.NC.update_robot_TM(robot_pose)  # update pose in NC
-        print("after update TM : " + str(robot_pose))
 
-        print("end update : " + str(robot_ids))
         return robot_ids
 
     def MultiRobotPath_query(self, robot_id_replan):  # query about path to MultiAgentPathFinder(MAPF)

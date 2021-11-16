@@ -35,8 +35,6 @@ class NavigationControl:
             self.PlanExecutedIdx[id] = [-1, -1]  # [i,j] Save the last index of NavPath[i][j] which the robot follows
             self.Flag_terminate[id] = 0
 
-        self.count = 0
-
     # New
     def allocate_goal(self, goals, robot_pose):  # execute when the robot TM allocates a goal to each robot
         # goals: {robot_id: goal vertex, ....}, robot_pose = {id, [vertex, vertex]}
@@ -94,9 +92,6 @@ class NavigationControl:
         return Rid_replan, Rid_robotTM
 
     def get_multipath_plan(self, multipaths):  # multipath: MultiPath type
-        num = "[" + str(self.count) + "]"
-        self.count = self.count + 1
-
         # initialize PlanExecutedIdx
         for id in multipaths.keys():
             if len(multipaths[id]) == 1:
@@ -200,10 +195,7 @@ class NavigationControl:
                 if scondTM_set[rid][tt] != []:
                     cond_cur = []
                     for cond in scondTM_set[rid][tt]:
-                        print(num, "cond : " + str(cond))
-                        print(num, "robotTM_mapping_set : " + str(robotTM_mapping_set))
                         if (len(robotTM_mapping_set[cond[0]][0]) > 0) and (len(robotTM_mapping_set[cond[0]]) > cond[1]):
-                            print(num, "robotTM_mapping_set[cond[0]][cond[1]] : " + str(robotTM_mapping_set[cond[0]][cond[1]]))
                             cond_cur.append([cond[0], robotTM_mapping_set[cond[0]][cond[1]]])
 
                     scond.append(cond_cur)
@@ -231,20 +223,28 @@ class NavigationControl:
             robotTM_check = {"current": False, "skip": False}
 
             if self.robotGoal[rid] != -1:
+                # print(vid[0], vid[1], self.robotGoal[rid])
+                # print(robotTM[rid])
+                # print(self.robotGoal[rid])
                 if robotTM[rid] != []:
+                # if len(robotTM[rid]) > 0:
                     if (vid[0] == robotTM[rid][0]) and (vid[1] == robotTM[rid][0]):
                         self.PlanExecutedIdx[rid][1] += 1
                         robotTM_check["current"] = True
                     elif (vid[0] == vid[1]):
-                        if vid in robotTM[rid]:
+                        if vid[0] in robotTM[rid]:
                             vidx = robotTM[rid].index(vid[0])
                             self.PlanExecutedIdx[rid][1] += (vidx + 1)
                             robotTM_check["skip"] = True
+                    elif (vid[0] == self.robotGoal[rid]) and (vid[1] == self.robotGoal[rid]):
+                        self.Flag_terminate[rid] = 0
+                        self.robotGoal[rid] = -1
                 elif (vid[0] == self.robotGoal[rid]) and (vid[1] == self.robotGoal[rid]):
                     self.Flag_terminate[rid] = 0
                     self.robotGoal[rid] = -1
 
                 if robotTM_set[rid] != []:
+                # if (len(robotTM_set[rid]) > 0) and (len(robotTM_set[rid][0] > 0)):
                     if self.PlanExecutedIdx[rid] == [len(robotTM_set[rid]) - 1, len(robotTM_set[rid][-1]) - 1]:
                         if (vid[0] == self.robotGoal[rid]) and (vid[1] == self.robotGoal[rid]):
                             self.Flag_terminate[rid] = 0
@@ -256,8 +256,10 @@ class NavigationControl:
 
             if self.Flag_terminate[rid] == -1:
                 if robotTM_set[rid] != []:
+                # if (len(robotTM_set[rid]) > 0) and (len(robotTM_set[rid][0] > 0)):
                     # if (robotTM[rid]!=[]) and (self.PlanExecutedIdx[rid][1]!=-1):
                     if robotTM[rid] != []:
+                    # if len(robotTM[rid]) > 0:
                         # if (vid[0]=robotTM[rid][0]) and (vid[1]==robotTM[rid][1]):
                         if robotTM_check["current"]:
                             temp_path = robotTM[rid]
@@ -265,15 +267,18 @@ class NavigationControl:
                             # print("before delete", rid, temp_path)
                             del temp_path[0]
                             # self.robotTM[rid] = copy.deepcopy(temp_path)
+                            print("Current", rid, temp_path)
                             self.robotTM[rid] = copy.copy(temp_path)
                             # print("after delete", rid, self.robotTM[rid])
                             # print(rid, self.PlanExecutedIdx)
                         # elif (vid[0]==vid[1]):
                         elif robotTM_check["skip"]:
-                            vidx = robotTM[rid].index(vid[0])
-                            del robotTM[rid][:vidx + 1]
+                            temp_path = robotTM[rid]
+                            vidx = temp_path.index(vid[0])
+                            del temp_path[:vidx + 1]
                             # self.robotTM[rid] = copy.deepcopy(robotTM[rid])
-                            self.robotTM[rid] = copy.copy(robotTM[rid])
+                            print("Skip", rid, temp_path)
+                            self.robotTM[rid] = copy.copy(temp_path)
                     else:
                         start_idx = self.PlanExecutedIdx[rid][0] + 1
                         if robotTM_scond[rid][start_idx] == []:
@@ -298,6 +303,7 @@ class NavigationControl:
                                 Rid_sendRobotTM.append(rid)
             elif self.Flag_terminate[rid] == 0:
                 if self.robotTM[rid] != []:
+                # if len(self.robotTM[rid]) > 0:
                     if (vid[0] == self.robotTM[rid][0]) and (vid[1] == self.robotTM[rid][0]):
                         temp_path = self.robotTM[rid]
                         del temp_path[0]
