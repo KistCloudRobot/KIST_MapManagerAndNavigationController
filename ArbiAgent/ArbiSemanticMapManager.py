@@ -53,25 +53,24 @@ class MapManagerDataSource(DataSource):
         self.AMR_LIFT_init = {"AMR_LIFT1": 201, "AMR_LIFT2": 202} # Initial vertex of LIFT
         self.AMR_TOW_init = {"AMR_TOW1": 203, "AMR_TOW2": 204} # Initial vertex of TOW
 
-        self.Rack_LIFT_init = {'RACK_LIFT0': 5, 'RACK_LIFT1': 1, 'RACK_LIFT2': 14,
+        self.Rack_LIFT_init = {'RACK_LIFT0': 5, 'RACK_LIFT1': 12, 'RACK_LIFT2': 14,
                                'RACK_LIFT3': 22, 'RACK_LIFT4': 18, 'RACK_LIFT5': 19}
         self.Rack_TOW_init = {'RACK_TOW0': 23, 'RACK_TOW1': 20}
 
-
+        self.Cargo_init = {"CARGO0":  5, "CARGO1": 18, 'CARGO2': 19}
         self.Rack_TOW_init = {'RACK_TOW0': 21, 'RACK_TOW1': 20} # Initial vertex of TOW Rack
 
-        self.Cargo_init = {"CARGO0":  1, "CARGO1": 18, 'CARGO2': 19} # Initial vertex of Cargo
+        self.Cargo_init = {"CARGO0":  5, "CARGO1": 18} # Initial vertex of Cargo
         self.Door_init = {'Door0': 0} # Initial status of Door
         self.MC = MapCloudlet(self.map_file, self.AMR_LIFT_init, self.AMR_TOW_init, self.Rack_TOW_init,
                               self.Rack_LIFT_init, self.Cargo_init, self.Door_init) # launch MC(MapCloudlet)
 
     def on_notify(self, content): # executed when the agent gets notification from ltm
-        # print("[on Notify]" + content)
+        print("[on Notify]" + content)
         time.sleep(0.05)
         gl_notify = GLFactory.new_gl_from_gl_string(content)
 
         if gl_notify.get_name() == "RobotInfo": # "RobotInfo" notification from ltm
-            print("[on Notify]" + content)
             ''' RobotInfo gl format: (RobotInfo $robot_id $x $y $loading $speed $battery)'''
             temp_RobotInfo = RobotInfo() # RobotInfo class
             temp_RobotInfo.id = gl_notify.get_expression(0).as_value().string_value() # get robotID

@@ -546,7 +546,6 @@ class NavigationControllerAgent(ArbiAgent):
             # goal_id = copy.deepcopy(self.ltm.NC.robotGoal[robot_id]) # get current goal
             # goal_id = copy.deepcopy(self.real_goal[robot_id])
             goal_id = copy.copy(self.real_goal[robot_id])
-            # goal_id = copy.copy(self.actual_goal[robot_id])
             if goal_id == -1:  # check whether robot has no goal
                 goal_id = start_id  # no gal -> start==goal
             path_query_gl += " (RobotPath \"" + robot_id + "\" " + str(start_id) + " " + str(goal_id) + ")"

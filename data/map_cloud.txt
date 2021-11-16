@@ -49,7 +49,7 @@ Vertex
 Vertex
 	name 234
 	type 0
-	pos 156.006 0.0 159.665
+	pos 155.506 0.0 159.665
 	edge 229
 	edge 233
 	edge 235

@@ -104,6 +104,7 @@ class MapCloudlet:
                         self.CARGO[id]['pos'].insert(0,info.pos)
                         self.CARGO[id]['vertex'].insert(0,info.vertex)
                         self.CARGO[id]['load_id'].insert(0,[info.id, load_id[0]])
+
                 elif info.load == 0 and self.AMR_LIFT[info.id]['load'][1] == 1:  # unload the rack now
                     self.AMR_LIFT[info.id]['load_id'].insert(0,[-1, -1])
 
