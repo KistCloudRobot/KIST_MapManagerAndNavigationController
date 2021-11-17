@@ -70,8 +70,8 @@ class NavigationControl:
                     self.robotStart[rid] = robot_pose[rid][0]  # start point: the current vertex
                     self.robotTM[rid] = []
                     self.robotTM_set[rid] = []
-                    self.PlanExecutedIdx = [-1, -1]
-                    self.robotTM_scond = []
+                    self.PlanExecutedIdx[rid] = [-1, -1]
+                    self.robotTM_scond[rid] = []
             else:  # the robot does not have any job
                 if rid in goals.keys():  # get a new job
                     Rid_replan.append(rid)
@@ -232,7 +232,6 @@ class NavigationControl:
 
         # find start condnition for TM
         scond_TM_translated = {}
-
         for rid in multipaths.keys():
             scond = []
             for tt in range(0, len(scondTM_set[rid])):
@@ -266,10 +265,11 @@ class NavigationControl:
             self.robotPose[rid] = vid
             robotTM_check = {"current": False, "skip": False}
 
+            # if rid == "AMR_TOW1":
+            #     print("[" + str(rid) + "]" + str(vid[0]) + " " + str(vid[1]) + " " + str(self.robotGoal[rid]) + " " + str(robotTM[rid]) + " " + str(robotTM_set[rid]))
+
             if self.robotGoal[rid] != -1:
-                # print(vid[0], vid[1], self.robotGoal[rid])
-                # print(robotTM[rid])
-                # print(self.robotGoal[rid])
+
                 if robotTM[rid] != []:
                 # if len(robotTM[rid]) > 0:
                     if (vid[0] == robotTM[rid][0]) and (vid[1] == robotTM[rid][0]):
@@ -317,14 +317,10 @@ class NavigationControl:
                             # print(rid, self.PlanExecutedIdx)
                         # elif (vid[0]==vid[1]):
                         elif robotTM_check["skip"]:
-                            print("befre", robotTM[rid])
-                            print(vid)
-                            print(vidx)
                             temp_path = robotTM[rid]
                             vidx = temp_path.index(vid[0])
                             del temp_path[:vidx + 1]
                             # self.robotTM[rid] = copy.deepcopy(robotTM[rid])
-                            print("Skip", rid, temp_path)
                             self.robotTM[rid] = copy.copy(temp_path)
                     else:
                         start_idx = self.PlanExecutedIdx[rid][0] + 1

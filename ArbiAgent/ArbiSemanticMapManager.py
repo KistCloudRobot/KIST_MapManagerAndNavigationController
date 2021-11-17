@@ -286,7 +286,7 @@ class MapManagerAgent(ArbiAgent):
         ''' MultiRobotPose gl format: (MultiRobotPose (RobotPose $robot_id (vertex $vertex_id $vertex_id)), ...) '''
 
         while True:
-            time.sleep(0.8)
+            time.sleep(0.5)
             MultiRobotoPose_gl = "(MultiRobotPose"
             RobotPose_gl = " (RobotPose \"{robot_id}\" (vertex_id {v_id1} {v_id2}))"
             vertex_gl = "(vertex_id {v_id1} {v_id2})"
@@ -302,6 +302,7 @@ class MapManagerAgent(ArbiAgent):
                     v_id2=temp_vertex[1]
                 )
             MultiRobotoPose_gl += ")"
+            print("notify!" + str(MultiRobotoPose_gl))
             self.notify(consumer, MultiRobotoPose_gl)
 
     def RobotPose_notify(self): # Notify RobotPose every 1 sec to Robot CM
@@ -345,7 +346,7 @@ class MapManagerAgent(ArbiAgent):
         ''' Collidable gl format: (Collidable $num (pair $robot_id $robot_id $time), …) '''
 
         while True:
-            time.sleep(1.5)
+            time.sleep(1)
             temp_Collidable_info = self.ltm.MC.detect_collision(10)
             temp_Collidable_num = len(temp_Collidable_info)
             if temp_Collidable_num:
