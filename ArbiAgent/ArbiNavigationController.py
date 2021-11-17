@@ -296,21 +296,21 @@ class NavigationControllerAgent(ArbiAgent):
                 print("2Thread create num : " + str(len(robot_ids)))
                 print(robot_id_replan, 1111111111111111111)
                 for robot_id in robot_id_replan:
-                    # if self.real_goal[robot_id] != -1:
-                    # self.SMM_notify(robot_id)  # # notify SMM of same control information
-                    print("[{action_id}][INFO3] {RobotID} cancel move".format(action_id=action_id, RobotID=robot_id))
-                    self.cancel_move(robot_id)
-                    print("[{action_id}][INFO3] {RobotID} cancel move finish".format(action_id=action_id, RobotID=robot_id))
-                    print("[{action_id}][INFO3] {RobotID} {flag}".format(action_id=action_id, RobotID=robot_id, flag=str(self.thread_flag[robot_id])))
-                    if self.thread_flag[robot_id]:
-                        self.thread_flag[robot_id] = False
-                        with self.lock[robot_id]:
-                            print("[{action_id}][INFO3] {RobotID} waiting thread".format(action_id=action_id, RobotID=robot_id))
-                            self.lock[robot_id].wait()
-                            print("[{action_id}][INFO3] {RobotID} waiting finish".format(action_id=action_id, RobotID=robot_id))
-                    print("[{action_id}][INFO3] {RobotID} Control request by <Move> Request [{num}]".format(action_id=action_id, RobotID=robot_id, num=self.count))
-                    Thread(target=self.Control_request, args=(robot_id, False, True, self.count, ), daemon=True).start()  # control request of robotID
-                    self.count = self.count + 1
+                    if self.real_goal[robot_id] != -1:
+                        # self.SMM_notify(robot_id)  # # notify SMM of same control information
+                        print("[{action_id}][INFO3] {RobotID} cancel move".format(action_id=action_id, RobotID=robot_id))
+                        self.cancel_move(robot_id)
+                        print("[{action_id}][INFO3] {RobotID} cancel move finish".format(action_id=action_id, RobotID=robot_id))
+                        print("[{action_id}][INFO3] {RobotID} {flag}".format(action_id=action_id, RobotID=robot_id, flag=str(self.thread_flag[robot_id])))
+                        if self.thread_flag[robot_id]:
+                            self.thread_flag[robot_id] = False
+                            with self.lock[robot_id]:
+                                print("[{action_id}][INFO3] {RobotID} waiting thread".format(action_id=action_id, RobotID=robot_id))
+                                self.lock[robot_id].wait()
+                                print("[{action_id}][INFO3] {RobotID} waiting finish".format(action_id=action_id, RobotID=robot_id))
+                        print("[{action_id}][INFO3] {RobotID} Control request by <Move> Request [{num}]".format(action_id=action_id, RobotID=robot_id, num=self.count))
+                        Thread(target=self.Control_request, args=(robot_id, False, True, self.count, ), daemon=True).start()  # control request of robotID
+                        self.count = self.count + 1
 
             goal_request_result = "(ok)"  # response to robotTM that request is successful
             print("[{action_id}][on Request6] Response of request of {RobotID}: {Result}".format(action_id=action_id, RobotID=requested_robot_id, Result=goal_request_result))
