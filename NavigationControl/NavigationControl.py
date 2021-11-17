@@ -35,8 +35,52 @@ class NavigationControl:
             self.PlanExecutedIdx[id] = [-1, -1]  # [i,j] Save the last index of NavPath[i][j] which the robot follows
             self.Flag_terminate[id] = 0
 
-    # New
     def allocate_goal(self, goals, robot_pose):  # execute when the robot TM allocates a goal to each robot
+        # goals: {robot_id: goal vertex, ....}, robot_pose = {id, [vertex, vertex]}
+
+        Rid_robotTM = []  # the list of robot ids that has an updated robotTM
+        Rid_replan = []  # the list of robot ids for replanning
+        flag_tow = False
+        flag_lift = False
+        # check if robot_ids are lifts or tows
+        for rid in goals.keys():
+            if rid in self.AMR_TOW_IDs:
+                flag_tow = True
+            if rid in self.AMR_LIFT_IDs:
+                flag_lift = True
+        check_ids = []
+        if flag_tow: check_ids.extend(self.AMR_TOW_IDs)
+        if flag_lift: check_ids.extend(self.AMR_LIFT_IDs)
+
+        for rid in check_ids:
+            if self.robotGoal[rid] != -1:  # the robot has a navigation job => initialize
+                Rid_replan.append(rid)  # require replanning
+                if rid in goals.keys():  # got new job
+                    self.robotGoal[rid] = goals[rid]
+
+                if self.robotTM[rid] != []:  # the robot is executing the plan # TODO: test
+                    self.robotTM[rid] = [self.robotTM[rid][0]]
+                    Rid_robotTM.append(rid)
+                    self.robotStart[rid] = self.robotTM[rid][0]
+                    self.robotTM_set[rid] = [self.robotTM[rid]]  # [robotTM, robotTM, robotTM, ...]
+                    self.PlanExecutedIdx[rid] = [0, -1]
+                    self.robotTM_scond[rid] = []  # start condition of robotTM
+
+                else:
+                    self.robotStart[rid] = robot_pose[rid][0]  # start point: the current vertex
+                    self.robotTM[rid] = []
+                    self.robotTM_set[rid] = []
+                    self.PlanExecutedIdx = [-1, -1]
+                    self.robotTM_scond = []
+            else:  # the robot does not have any job
+                if rid in goals.keys():  # get a new job
+                    Rid_replan.append(rid)
+                    self.robotStart[rid] = robot_pose[rid][0]
+                    self.robotGoal[rid] = goals[rid]
+
+        return Rid_replan, Rid_robotTM
+    # New
+    def allocate_goal_(self, goals, robot_pose):  # execute when the robot TM allocates a goal to each robot
         # goals: {robot_id: goal vertex, ....}, robot_pose = {id, [vertex, vertex]}
 
         Rid_robotTM = []  # the list of robot ids that has an updated robotTM
@@ -273,6 +317,9 @@ class NavigationControl:
                             # print(rid, self.PlanExecutedIdx)
                         # elif (vid[0]==vid[1]):
                         elif robotTM_check["skip"]:
+                            print("befre", robotTM[rid])
+                            print(vid)
+                            print(vidx)
                             temp_path = robotTM[rid]
                             vidx = temp_path.index(vid[0])
                             del temp_path[:vidx + 1]

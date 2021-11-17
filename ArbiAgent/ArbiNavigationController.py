@@ -206,6 +206,10 @@ class NavigationControllerAgent(ArbiAgent):
                         self.collide_flag[robot_id] = True
                         print("[INFO] {RobotID} cancel move by collidable".format(RobotID=robot_id))
                         self.cancel_move(robot_id)
+                    for robot_id in robot_ids:
+                        # self.collide_flag[robot_id] = True
+                        # print("[INFO] {RobotID} cancel move by collidable".format(RobotID=robot_id))
+                        # self.cancel_move(robot_id)
                         if self.thread_flag[robot_id]:
                             self.thread_flag[robot_id] = False
                             with self.lock[robot_id]:
@@ -262,20 +266,22 @@ class NavigationControllerAgent(ArbiAgent):
             
             if robot_id_BI:  # check whether robot_id_BI is empty
                 print("1Thread create num : " + str(len(robot_id_BI)))
+                print("1Thread create BI : " , robot_id_BI)
                 for robot_id in robot_id_BI:
-                    self.SMM_notify(robot_id)  # # notify SMM of same control information
-                    print("[{action_id}][INFO2] {RobotID} cancel move".format(action_id=action_id, RobotID=robot_id))
-                    self.cancel_move(robot_id)
-                    print("[{action_id}][INFO2] {RobotID} cancel move finish".format(action_id=action_id, RobotID=robot_id))
-                    print("[{action_id}][INFO2] {RobotID} {flag}".format(action_id=action_id, RobotID=robot_id, flag=str(self.thread_flag[robot_id])))
-                    if self.thread_flag[robot_id]:
-                        self.thread_flag[robot_id] = False
-                        with self.lock[robot_id]:
-                            print("[{action_id}][INFO2] {RobotID} waiting thread".format(action_id=action_id, RobotID=robot_id))
-                            self.lock[robot_id].wait()
-                    print("[{action_id}][INFO2] {RobotID} Control request by <Move> Request [{num}]".format(action_id=action_id, RobotID=robot_id, num=self.count))
-                    Thread(target=self.Control_request, args=(robot_id, False, True, self.count, ), daemon=True).start()  # control request of robotID
-                    self.count = self.count + 1
+                    if len(robot_id_replan) < 2:
+                        self.SMM_notify(robot_id)  # # notify SMM of same control information
+                        print("[{action_id}][INFO2] {RobotID} cancel move".format(action_id=action_id, RobotID=robot_id))
+                        self.cancel_move(robot_id)
+                        print("[{action_id}][INFO2] {RobotID} cancel move finish".format(action_id=action_id, RobotID=robot_id))
+                        print("[{action_id}][INFO2] {RobotID} {flag}".format(action_id=action_id, RobotID=robot_id, flag=str(self.thread_flag[robot_id])))
+                        if self.thread_flag[robot_id]:
+                            self.thread_flag[robot_id] = False
+                            with self.lock[robot_id]:
+                                print("[{action_id}][INFO2] {RobotID} waiting thread".format(action_id=action_id, RobotID=robot_id))
+                                self.lock[robot_id].wait()
+                        print("[{action_id}][INFO2] {RobotID} Control request by <Move> Request [{num}]".format(action_id=action_id, RobotID=robot_id, num=self.count))
+                        Thread(target=self.Control_request, args=(robot_id, False, True, self.count, ), daemon=True).start()  # control request of robotID
+                        self.count = self.count + 1
 
             if robot_id_replan:  # check whether robot_id_replan is empty
                 path_response = self.MultiRobotPath_query(robot_id_replan)  # query about not collidable path to MultiAgentPathFinder(MAPF)
@@ -285,10 +291,13 @@ class NavigationControllerAgent(ArbiAgent):
                 print("before update")
                 robot_ids = self.MultiRobotPath_update(path_response_gl)  # update path of robot in NC
                 print("after update")
-
+                for robot_id in robot_ids:
+                    self.SMM_notify(robot_id)
                 print("2Thread create num : " + str(len(robot_ids)))
+                print(robot_id_replan, 1111111111111111111)
                 for robot_id in robot_id_replan:
-                    self.SMM_notify(robot_id)  # # notify SMM of same control information
+                    # if self.real_goal[robot_id] != -1:
+                    # self.SMM_notify(robot_id)  # # notify SMM of same control information
                     print("[{action_id}][INFO3] {RobotID} cancel move".format(action_id=action_id, RobotID=robot_id))
                     self.cancel_move(robot_id)
                     print("[{action_id}][INFO3] {RobotID} cancel move finish".format(action_id=action_id, RobotID=robot_id))
@@ -645,7 +654,7 @@ class NavigationControllerAgent(ArbiAgent):
                     goal_result_gl = "(MoveResult (actionID \"{ActionID}\") \"{Result}\")".format(
                         ActionID=self.goal_actionID[robot_id],
                         Result="success")
-                    # print("[INFO] \"{RobotID}\" to \"{GoalID}\": success".format(RobotID=robot_id, GoalID=self.actual_goal[robot_id]))
+                    print("[INFO] \"{RobotID}\" to \"{GoalID}\": success".format(RobotID=robot_id, GoalID=self.actual_goal[robot_id]))
                     self.send(self.TM_name[robot_id], goal_result_gl)  # send result to robotTM
                     self.actual_goal[robot_id] = self.ltm.NC.robotGoal[robot_id]
                     self.real_goal[robot_id] = self.ltm.NC.robotGoal[robot_id]
@@ -683,7 +692,8 @@ class NavigationControllerAgent(ArbiAgent):
         path_query_gl = "(MultiRobotPath"
         for robot_id in robot_id_replan:
             # start_id = copy.deepcopy(self.cur_robot_pose[robot_id][0])  # get current nearest vertext to set start vertex
-            start_id = copy.copy(self.cur_robot_pose[robot_id][0])  # get current nearest vertext to set start vertex
+            # start_id = copy.copy(self.cur_robot_pose[robot_id][0])  # get current nearest vertext to set start vertex
+            start_id = self.cur_robot_pose[robot_id][0]
             # goal_id = copy.deepcopy(self.ltm.NC.robotGoal[robot_id]) # get current goal
             # goal_id = copy.deepcopy(self.real_goal[robot_id])
             goal_id = copy.copy(self.real_goal[robot_id])

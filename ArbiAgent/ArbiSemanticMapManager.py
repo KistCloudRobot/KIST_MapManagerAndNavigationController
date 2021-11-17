@@ -286,7 +286,7 @@ class MapManagerAgent(ArbiAgent):
         ''' MultiRobotPose gl format: (MultiRobotPose (RobotPose $robot_id (vertex $vertex_id $vertex_id)), ...) '''
 
         while True:
-            time.sleep(1)
+            time.sleep(0.8)
             MultiRobotoPose_gl = "(MultiRobotPose"
             RobotPose_gl = " (RobotPose \"{robot_id}\" (vertex_id {v_id1} {v_id2}))"
             vertex_gl = "(vertex_id {v_id1} {v_id2})"
