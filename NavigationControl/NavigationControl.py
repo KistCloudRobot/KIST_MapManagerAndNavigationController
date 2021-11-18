@@ -319,7 +319,8 @@ class NavigationControl:
                         elif robotTM_check["skip"]:
                             temp_path = robotTM[rid]
                             vidx = temp_path.index(vid[0])
-                            del temp_path[:vidx + 1]
+                            del temp_path[:vidx + 1] 
+                            print("skip", rid, temp_path)
                             # self.robotTM[rid] = copy.deepcopy(robotTM[rid])
                             self.robotTM[rid] = copy.copy(temp_path)
                     else:
