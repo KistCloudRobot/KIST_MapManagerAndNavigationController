@@ -17,7 +17,7 @@ from MapManagement.MapCloudlet import MapCloudlet
 from DataType.RobotInfo import RobotInfo
 from DataType.CallInfo import CallInfo
 
-broker_url = "tcp://192.168.0.14:61313"
+broker_url = "tcp://172.16.165.171:61313"
 # broker_url = 'tcp://' + os.environ["JMS_BROKER"]
 
 
@@ -64,13 +64,15 @@ class MapManagerDataSource(DataSource):
         self.MC = MapCloudlet(self.map_file, self.AMR_LIFT_init, self.AMR_TOW_init, self.Rack_TOW_init,
                               self.Rack_LIFT_init, self.Cargo_init, self.Door_init) # launch MC(MapCloudlet)
 
+        self.job_queue = []
+
     def on_notify(self, content): # executed when the agent gets notification from ltm
         # print("[on Notify]" + content)
         time.sleep(0.05)
         gl_notify = GLFactory.new_gl_from_gl_string(content)
 
         if gl_notify.get_name() == "RobotInfo": # "RobotInfo" notification from ltm
-            print(content)
+            # print(content)
             ''' RobotInfo gl format: (RobotInfo $robot_id $x $y $loading $speed $battery)'''
             temp_RobotInfo = RobotInfo() # RobotInfo class
             temp_RobotInfo.id = gl_notify.get_expression(0).as_value().string_value() # get robotID
@@ -469,6 +471,7 @@ class MapManagerAgent(ArbiAgent):
                                      " (vertex_id " + str(temp_LIFT_vertex[0]) + " " + str(temp_LIFT_vertex[1]) + ")" + \
                                      " " + str(temp_LIFT_load) + " \"" + str(temp_LIFT_goal) + "\")"
             temp_response += ")"
+            print(temp_response)
             return temp_response
 
         else:

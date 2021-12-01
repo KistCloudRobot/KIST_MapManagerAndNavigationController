@@ -5,8 +5,6 @@
   </component>
   <component name="ChangeListManager">
     <list default="true" id="04149278-7bc7-47aa-8e5e-6913cd76eeb1" name="Default Changelist" comment="bug fix">
-      <change beforePath="$PROJECT_DIR$/.idea/CloudRobot.iml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/CloudRobot.iml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/.idea/misc.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/misc.xml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/ArbiAgent/ArbiNavigationController.py" beforeDir="false" afterPath="$PROJECT_DIR$/ArbiAgent/ArbiNavigationController.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/ArbiAgent/ArbiSemanticMapManager.py" beforeDir="false" afterPath="$PROJECT_DIR$/ArbiAgent/ArbiSemanticMapManager.py" afterDir="false" />

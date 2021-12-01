@@ -8,6 +8,7 @@ from threading import Condition, Thread
 
 sys.path.append("/home/kist/demo/src/Python_mcArbiFramework/")
 
+sys.path.append(str(pathlib.Path(__file__).parent.parent.resolve()))
 
 from arbi_agent.agent.arbi_agent import ArbiAgent
 from arbi_agent.ltm.data_source import DataSource
@@ -18,7 +19,7 @@ from MapManagement.MapMOS import MapMOS
 from NavigationControl.NavigationControl import NavigationControl
 
 agent_MAPF = "agent://www.arbi.com/Local/MultiAgentPathFinder"
-broker_url = "tcp://192.168.0.14:61313"
+broker_url = "tcp://172.16.165.171:61313"
 
 
 # broker_url = 'tcp://' + os.environ["JMS_BROKER"]
@@ -148,7 +149,7 @@ class NavigationControllerAgent(ArbiAgent):
         # print("[on Notify] " + notification)
         temp_gl = GLFactory.new_gl_from_gl_string(notification)  # notification to gl
         gl_name = temp_gl.get_name()  # get name of gl
-        
+
         if gl_name == "MultiRobotPose":  # "MultiRobotPose" update from SMM
             ''' MultiRobotPose gl format: (MultiRobotPose (RobotPose $robot_id (vertex $vertex_id $vertex_id)), ...) '''
 
@@ -156,11 +157,11 @@ class NavigationControllerAgent(ArbiAgent):
             multi_robot_pose = {}  # {robotID: [vertex, vertex]}
 
             for i in range(robot_num):  # update robot pose from gl
-                '''RobotPose_gl format: (RobotPose $robot_id (vertex $vertex_id $vertex_id))'''
+                '''robot_pose_gl format: (RobotPose $robot_id (vertex $vertex_id $vertex_id))'''
 
-                RobotPose_gl = temp_gl.get_expression(i).as_generalized_list()  # get ith gl content
-                robot_id = RobotPose_gl.get_expression(0).as_value().string_value()  # get robotID
-                robot_vertex_gl = RobotPose_gl.get_expression(1).as_generalized_list()  # get current vertex
+                robot_pose_gl = temp_gl.get_expression(i).as_generalized_list()  # get ith gl content
+                robot_id = robot_pose_gl.get_expression(0).as_value().string_value()  # get robotID
+                robot_vertex_gl = robot_pose_gl.get_expression(1).as_generalized_list()  # get current vertex
                 robot_vertex = [robot_vertex_gl.get_expression(0).as_value().int_value(),
                                 robot_vertex_gl.get_expression(1).as_value().int_value()]  # current pose to list
                 multi_robot_pose[robot_id] = robot_vertex
@@ -240,12 +241,12 @@ class NavigationControllerAgent(ArbiAgent):
     def on_request(self, sender, request):  # executed when the agent gets request
         print("[on Request] " + request)
         temp_gl = GLFactory.new_gl_from_gl_string(request)
-
+        print("[on Request] " + temp_gl.get_name())
         if temp_gl.get_name() == "Move":  # "Move" request from robotTM
             ''' Move gl format: (Move (actionID $actionID) $robotID $start $end)
                                 start: start vertex
                                 end: end(goal) vertex '''
-            
+
             robot_goal = {}  # {robotID: goalVertex}
             action_id = temp_gl.get_expression(0).as_generalized_list().get_expression(0).as_value().string_value()  # get actionID
             robot_id = temp_gl.get_expression(1).as_value().string_value()  # get robotID
@@ -268,7 +269,7 @@ class NavigationControllerAgent(ArbiAgent):
             robot_id_replan, robot_id_BI = self.ltm.NC.allocate_goal(robot_goal,self.cur_robot_pose)  # allocate goal in NC
             ''' robot_id_replan: robot which needs to get replanning -> MAPF
                 robot_id_BI: robotID that has any change of its path and notify the information of robotID to robotBI '''
-            
+
             if robot_id_BI:  # check whether robot_id_BI is empty
                 print("1Thread create num : " + str(len(robot_id_BI)))
                 print("1Thread create BI : " , robot_id_BI)
@@ -423,9 +424,9 @@ class NavigationControllerAgent(ArbiAgent):
                 -> self.cur_robot_pose["AMR_TOW1"][0] == self.cur_robot_pose["AMR_TOW1"][1]
                 -> len(self.ltm.NC.robotTM[robot_id][0]) == 1
             => no control is needed '''
-        
+
         ''' self.ltm.NC.robotTM[robotID]: current path of robotID '''
-    
+
         if collide:
             self.collide_flag[robot_id] = True
             print(111111111111111111111111, robot_id, "COLLIDABLE")
@@ -451,7 +452,7 @@ class NavigationControllerAgent(ArbiAgent):
                 break
             else:
                 continue
-        
+
         if self.thread_flag[robot_id]:
             if (len(self.ltm.NC.robotTM[robot_id]) == 1):  # check whether robot is stationary
                 stationary_check = (self.cur_robot_pose[robot_id][0] == self.cur_robot_pose[robot_id][1]) and (self.actual_goal[robot_id] == -1)  # True if robot is stationary and will be stationary
@@ -473,7 +474,7 @@ class NavigationControllerAgent(ArbiAgent):
                     #             "AMR_TOW1": "\"7\""
                     #             "AMR_TOW2": "\"8\""
                     #         cancelMove gl format: (cancelMove (actionID $actionID)) '''
-                    
+
                     #     while True:
                     #         temp_Cancel_gl = "(cancelMove (actionID {actionID}))"
                     #         Cancel_gl = temp_Cancel_gl.format(actionID=self.BI_actionID[robot_id][1])  # Cancel actionID
@@ -645,7 +646,7 @@ class NavigationControllerAgent(ArbiAgent):
 
     def path_gl_generator(self, path, robot_id):  # convert path list to path gl
         ''' path gl format: (path $v_id1 $v_id2 ….) '''
-        
+
         if path[0] != self.cur_robot_pose[robot_id][0]:
             path.insert(0, self.cur_robot_pose[robot_id][0])
         path_gl = "(path"
@@ -696,7 +697,7 @@ class NavigationControllerAgent(ArbiAgent):
             path_size = path_gl.get_expression_size()  # get path size
             path_size -= 1
             path = list()
-            
+
             if path_size > 0:
                 for j in range(path_size):
                     path.append(path_gl.get_expression(j).as_value().int_value())  # generate path list
